@@ -1,13 +1,25 @@
-import { Transform } from 'class-transformer';
-import { ArrayMinSize, IsEnum, IsNotEmpty, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { ArrayMinSize, ArrayUnique, IsArray, IsEnum, IsInt, IsNotEmpty, IsString, IsUUID, Matches, MaxLength, Min, ValidateNested } from 'class-validator';
 import { GuardarCarritoDto } from './guardar-carrito.dto';
-import { CondicionPago } from '../order.entity';
+import { CondicionPago, EstadoSuborden } from '../order.entity';
 
-export class ConfirmarPedidoDto extends GuardarCarritoDto {
-  @ArrayMinSize(1) declare items: GuardarCarritoDto['items'];
+// Entrega y pago de la suborden de un vendedor.
+export class EntregaSubordenDto {
+  @IsInt() @Min(1) idNegocio: number;
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @IsNotEmpty() @MaxLength(255) direccionEntrega: string;
   @IsEnum(CondicionPago) condicionPago: CondicionPago;
+}
+
+export class ConfirmarPedidoDto extends GuardarCarritoDto {
+  @ArrayMinSize(1) declare items: GuardarCarritoDto['items'];
+  @IsArray() @ArrayMinSize(1) @ArrayUnique((entrega: EntregaSubordenDto) => entrega.idNegocio)
+  @ValidateNested({ each: true }) @Type(() => EntregaSubordenDto)
+  entregas: EntregaSubordenDto[];
   @IsUUID() claveConfirmacion: string;
   @IsString() @Matches(/^\d{1,18}\.\d{2}$/) total: string;
+}
+
+export class CambiarEstadoDto {
+  @IsEnum(EstadoSuborden) estado: EstadoSuborden;
 }

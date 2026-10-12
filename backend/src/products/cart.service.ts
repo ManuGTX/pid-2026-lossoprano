@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { Cliente } from '../users/user.entity';
+import { Negocio } from '../business/business.entity';
 import { CarritoItem } from './cart-item.entity';
 import { Producto } from './products.entity';
 import { precioParaCantidad } from './price-tier.entity';
@@ -16,16 +17,25 @@ export class CarritoService {
     });
     const vigentes = filas.filter(item => item.version === item.producto.version);
     if (!vigentes.length) return null;
-    const negocio = vigentes[0].producto.negocio;
     const precios = vigentes.map(item => precioParaCantidad(item.producto.precioBase, item.producto.preciosEscalonados, item.cantidad));
-    const subtotalCentavos = vigentes.reduce((total, item, i) => total + Math.round(Number(precios[i]) * 100) * item.cantidad, 0);
-    const minimoCentavos = Math.round(Number(negocio.montoMinimoOrden) * 100);
-    const faltanteCentavos = Math.max(0, minimoCentavos - subtotalCentavos);
-    return { idNegocio: negocio.idNegocio, nombreNegocio: negocio.nombreComercial,
-      subtotal: (subtotalCentavos / 100).toFixed(2), montoMinimoOrden: negocio.montoMinimoOrden,
-      faltanteMinimo: (faltanteCentavos / 100).toFixed(2),
-      cumpleMinimos: faltanteCentavos === 0 && vigentes.every(item => item.cantidad >= (item.producto.cantidadMinimaCompra ?? 1) && item.cantidad <= item.producto.stock),
-      items: vigentes.map((item, i) => ({ idProducto: item.idProducto, version: item.version,
+    // Cada vendedor del carrito tiene su propio subtotal y sus propios mínimos.
+    const grupos = new Map<number, { negocio: Negocio; centavos: number; cantidadesValidas: boolean }>();
+    vigentes.forEach((item, i) => {
+      const negocio = item.producto.negocio;
+      const grupo = grupos.get(negocio.idNegocio) ?? { negocio, centavos: 0, cantidadesValidas: true };
+      grupo.centavos += Math.round(Number(precios[i]) * 100) * item.cantidad;
+      grupo.cantidadesValidas &&= item.cantidad >= (item.producto.cantidadMinimaCompra ?? 1) && item.cantidad <= item.producto.stock;
+      grupos.set(negocio.idNegocio, grupo);
+    });
+    const vendedores = [...grupos.values()].sort((a, b) => a.negocio.idNegocio - b.negocio.idNegocio).map(({ negocio, centavos, cantidadesValidas }) => {
+      const faltanteCentavos = Math.max(0, Math.round(Number(negocio.montoMinimoOrden) * 100) - centavos);
+      return { idNegocio: negocio.idNegocio, nombreNegocio: negocio.nombreComercial,
+        subtotal: (centavos / 100).toFixed(2), montoMinimoOrden: negocio.montoMinimoOrden,
+        faltanteMinimo: (faltanteCentavos / 100).toFixed(2), cumpleMinimos: faltanteCentavos === 0 && cantidadesValidas };
+    });
+    return { subtotal: ([...grupos.values()].reduce((total, grupo) => total + grupo.centavos, 0) / 100).toFixed(2),
+      cumpleMinimos: vendedores.every(vendedor => vendedor.cumpleMinimos), vendedores,
+      items: vigentes.map((item, i) => ({ idProducto: item.idProducto, idNegocio: item.producto.idNegocio, version: item.version,
         cantidad: item.cantidad, nombre: item.producto.nombre, precioBase: item.producto.precioBase, precioUnitario: precios[i],
         preciosEscalonados: item.producto.preciosEscalonados
           .map(({ cantidadMinima, precioUnitario }) => ({ cantidadMinima, precioUnitario }))
@@ -42,7 +52,6 @@ export class CarritoService {
       const repo = manager.getRepository(CarritoItem);
       if (dto.importar && await repo.exists({ where: { idCliente } })) return this.leer(manager, idCliente);
       const nuevos: CarritoItem[] = [];
-      let vendedor: number | undefined;
       for (const item of [...dto.items].sort((a, b) => a.idProducto - b.idProducto)) {
         const producto = await manager.getRepository(Producto).findOne({ where: { idProducto: item.idProducto }, lock: { mode: 'pessimistic_read' }, loadEagerRelations: false });
         if (!producto || producto.version !== item.version || producto.stock === 0) continue;
@@ -50,8 +59,6 @@ export class CarritoService {
         if (producto.stock < minimo) continue;
         if (item.cantidad < minimo && !dto.importar) throw new BadRequestException(`La cantidad mínima para ${producto.nombre} es ${minimo} unidades.`);
         if (producto.idNegocio === cliente.idNegocio) throw new BadRequestException('No podés comprar productos de tu propio negocio.');
-        if (vendedor !== undefined && vendedor !== producto.idNegocio) throw new BadRequestException('El carrito solo puede tener productos de un vendedor.');
-        vendedor = producto.idNegocio;
         nuevos.push(repo.create({ idCliente, idProducto: producto.idProducto, version: producto.version, cantidad: Math.max(minimo, Math.min(item.cantidad, producto.stock)) }));
       }
       await repo.delete({ idCliente });

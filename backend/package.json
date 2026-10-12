@@ -11,6 +11,7 @@
     "test:checkout": "npm run build && node --test test/checkout.test.cjs",
     "test:cart:integration": "npm run build && node --test test/cart.integration.cjs",
     "migrar:categorias": "node migrar.js migrations/004-categorias-precios-escalonados.sql",
+    "migrar:subordenes": "node migrar.js migrations/006-subordenes.sql",
     "lint": "eslint \"src/**/*.ts\""
   },
   "dependencies": {
