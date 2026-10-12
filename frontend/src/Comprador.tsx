@@ -12,7 +12,7 @@ export default function PanelComprador({ token, idNegocio, estadoCarrito, abrirC
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
   const [vendedores, setVendedores] = useState<Pick<Negocio, 'idNegocio' | 'nombreComercial'>[]>([]);
-  const [vendedor, setVendedor] = useState(() => estadoCarrito.carrito ? String(estadoCarrito.carrito.idNegocio) : '');
+  const [vendedor, setVendedor] = useState('');
   const busquedaActual = useRef(0);
   const [q, setQ] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -20,11 +20,6 @@ export default function PanelComprador({ token, idNegocio, estadoCarrito, abrirC
   const [error, setError] = useState('');
   const [detalle, setDetalle] = useState<Producto | null>(null);
   const { avisoCarrito, agregar } = estadoCarrito;
-  const vendedorCarrito = estadoCarrito.carrito?.idNegocio;
-
-  useEffect(() => {
-    setVendedor(vendedorCarrito ? String(vendedorCarrito) : '');
-  }, [vendedorCarrito]);
 
   async function buscar(evento?: FormEvent) {
     evento?.preventDefault();
@@ -78,7 +73,7 @@ export default function PanelComprador({ token, idNegocio, estadoCarrito, abrirC
       <div className="explorar-header">
         <div>
           <h2>Explorar catálogo</h2>
-          <p className="muted">Buscá productos y filtrá por vendedor para armar tu pedido.</p>
+          <p className="muted">Buscá productos y combiná varios vendedores en un mismo pedido.</p>
         </div>
       </div>
 
@@ -121,7 +116,7 @@ export default function PanelComprador({ token, idNegocio, estadoCarrito, abrirC
         ))}
       </div>
 
-      {detalle && <DetalleProducto producto={detalle} mensaje={avisoCarrito} esPropio={detalle.idNegocio === idNegocio} alCerrar={() => setDetalle(null)} alAgregar={async (cantidad) => { if (await agregar(detalle, cantidad)) { setVendedor(String(detalle.idNegocio)); setDetalle(null); abrirCarrito(); } }} />}
+      {detalle && <DetalleProducto producto={detalle} mensaje={avisoCarrito} esPropio={detalle.idNegocio === idNegocio} alCerrar={() => setDetalle(null)} alAgregar={async (cantidad) => { if (await agregar(detalle, cantidad)) { setDetalle(null); abrirCarrito(); } }} />}
 
     </section>
   );

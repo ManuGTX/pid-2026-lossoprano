@@ -18,17 +18,22 @@ const { claveCategoria } = require('../dist/categories/category.entity');
 
 const datos = { nombre: 'Producto', descripcion: 'Descripción', idCategoria: 1, stock: 3, precioBase: 12.5 };
 
-test('checkout exige dirección, condición simulada, clave y carrito válido', () => {
-  const { ConfirmarPedidoDto } = require('../dist/products/dto/confirmar-pedido.dto');
-  const base = { direccionEntrega: ' Calle 123 ', condicionPago: 'CONTADO', claveConfirmacion: require('node:crypto').randomUUID(), total: '10.00', items: [{ idProducto: 1, version: 1, cantidad: 1 }] };
+test('checkout exige entrega y condición simulada por vendedor, clave y carrito válido', () => {
+  const { ConfirmarPedidoDto, CambiarEstadoDto } = require('../dist/products/dto/confirmar-pedido.dto');
+  const entrega = { idNegocio: 2, direccionEntrega: ' Calle 123 ', condicionPago: 'CONTADO' };
+  const base = { entregas: [entrega], claveConfirmacion: require('node:crypto').randomUUID(), total: '10.00', items: [{ idProducto: 1, version: 1, cantidad: 1 }] };
   for (const condicionPago of ['CONTADO', 'TRANSFERENCIA', 'CUENTA_CORRIENTE']) {
-    const dto = plainToInstance(ConfirmarPedidoDto, { ...base, condicionPago });
+    const dto = plainToInstance(ConfirmarPedidoDto, { ...base, entregas: [{ ...entrega, condicionPago }, { ...entrega, idNegocio: 3 }] });
     assert.equal(validateSync(dto).length, 0);
-    assert.equal(dto.direccionEntrega, 'Calle 123');
+    assert.equal(dto.entregas[0].direccionEntrega, 'Calle 123');
   }
-  for (const cambio of [{ direccionEntrega: '  ' }, { condicionPago: 'TARJETA' }, { items: [] }, { items: [{ idProducto: 1, version: 1, cantidad: -1 }] }, { claveConfirmacion: 'abc' }]) {
+  for (const cambio of [{ entregas: [] }, { entregas: [{ ...entrega, direccionEntrega: '  ' }] }, { entregas: [{ ...entrega, condicionPago: 'TARJETA' }] },
+    { entregas: [entrega, entrega] }, { entregas: [{ ...entrega, idNegocio: 0 }] }, { entregas: undefined },
+    { items: [] }, { items: [{ idProducto: 1, version: 1, cantidad: -1 }] }, { claveConfirmacion: 'abc' }]) {
     assert.ok(validateSync(plainToInstance(ConfirmarPedidoDto, { ...base, ...cambio })).length);
   }
+  assert.equal(validateSync(plainToInstance(CambiarEstadoDto, { estado: 'PREPARADA' })).length, 0);
+  assert.ok(validateSync(plainToInstance(CambiarEstadoDto, { estado: 'CONFIRMADO' })).length);
 });
 
 function transaccional(repo) {

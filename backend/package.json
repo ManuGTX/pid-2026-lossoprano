@@ -6,11 +6,12 @@
     "start:dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main",
-    "test": "jest --runInBand",
+    "test": "npm run build && node --test test/products.test.cjs test/checkout.test.cjs test/cart.integration.cjs",
     "test:products": "npm run build && node --test test/products.test.cjs",
     "test:checkout": "npm run build && node --test test/checkout.test.cjs",
     "test:cart:integration": "npm run build && node --test test/cart.integration.cjs",
     "migrar:categorias": "node migrar.js migrations/004-categorias-precios-escalonados.sql",
+    "migrar:subordenes": "node migrar.js migrations/006-subordenes.sql",
     "lint": "eslint \"src/**/*.ts\""
   },
   "dependencies": {
@@ -45,6 +46,7 @@
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.71.2"
   }
 }

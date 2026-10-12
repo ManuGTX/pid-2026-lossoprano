@@ -4,6 +4,7 @@ import Comprador from './Comprador';
 import CrearProducto from './CrearProducto';
 import useCarrito from './useCarrito';
 import PanelCarrito from './PanelCarrito';
+import Pedidos from './Pedidos';
 
 type Vista = 'ingreso' | 'registro';
 const negocioInicial = { razonSocial: '', nombreComercial: '', identificacionFiscal: '', telefono: '', direccion: '' };
@@ -231,7 +232,7 @@ function Registro({ alRegistrarse }: { alRegistrarse: (sesion: Sesion) => void }
   );
 }
 
-type Seccion = 'explorar' | 'perfil' | 'productos';
+type Seccion = 'explorar' | 'perfil' | 'productos' | 'pedidos';
 
 function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guardarSesion: (sesion: Sesion) => void; cerrarSesion: () => void }) {
   const estadoCarrito = useCarrito(sesion.cliente.idCliente, sesion.accessToken, sesion.negocio.idNegocio);
@@ -332,6 +333,14 @@ function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guarda
             onClick={() => handleTabClick('explorar')}
           >
             Explorar
+          </button>
+          <button
+            type="button"
+            className={`nav-tab ${seccion === 'pedidos' ? 'active' : ''}`}
+            aria-current={seccion === 'pedidos' ? 'page' : undefined}
+            onClick={() => handleTabClick('pedidos')}
+          >
+            Pedidos
           </button>
         </nav>
         <div className="navbar-actions">
@@ -464,6 +473,11 @@ function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guarda
             </section>
             {sesion.cliente.rol === 'VENDEDOR' && <CrearProducto token={sesion.accessToken} listPosition="above" />}
           </>
+        </div>
+      )}
+      {seccion === 'pedidos' && (
+        <div key={`pedidos-${refreshKey}`}>
+          <Pedidos token={sesion.accessToken} esVendedor={!esComprador} />
         </div>
       )}
       {carritoAbierto && <PanelCarrito estado={estadoCarrito} direccionInicial={sesion.negocio.direccion} alCerrar={() => setCarritoAbierto(false)} />}

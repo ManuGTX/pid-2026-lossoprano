@@ -1,3 +1,21 @@
+import type { CondicionPago, EstadoSuborden } from './api';
+
+export const CONDICIONES_PAGO: Record<CondicionPago, string> = { CONTADO: 'Contado', TRANSFERENCIA: 'Transferencia', CUENTA_CORRIENTE: 'Cuenta corriente' };
+export const ESTADOS_SUBORDEN: Record<EstadoSuborden, string> = { PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', PREPARADA: 'Preparada',
+  ENVIADA: 'Enviada', ENTREGADA: 'Entregada', RECHAZADA: 'Rechazada', CANCELADA: 'Cancelada' };
+type Accion = { estado: EstadoSuborden; etiqueta: string };
+// Cambios de estado que ofrece la interfaz a cada parte; la API vuelve a validarlos.
+export const ACCIONES_VENDEDOR: Partial<Record<EstadoSuborden, Accion[]>> = {
+  PENDIENTE: [{ estado: 'CONFIRMADA', etiqueta: 'Confirmar' }, { estado: 'RECHAZADA', etiqueta: 'Rechazar' }],
+  CONFIRMADA: [{ estado: 'PREPARADA', etiqueta: 'Marcar preparada' }],
+  PREPARADA: [{ estado: 'ENVIADA', etiqueta: 'Marcar enviada' }],
+  ENVIADA: [{ estado: 'ENTREGADA', etiqueta: 'Marcar entregada' }],
+};
+export const ACCIONES_COMPRADOR: Partial<Record<EstadoSuborden, Accion[]>> = {
+  PENDIENTE: [{ estado: 'CANCELADA', etiqueta: 'Cancelar' }],
+  CONFIRMADA: [{ estado: 'CANCELADA', etiqueta: 'Cancelar' }],
+};
+
 export function formatCurrency(amount: string | number): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   if (isNaN(num)) return '$0.00';

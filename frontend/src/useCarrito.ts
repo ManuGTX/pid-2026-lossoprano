@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, Carrito, Producto, ConfirmacionPedido } from './api';
+import { api, Carrito, ItemCarrito, Producto, ConfirmacionPedido } from './api';
 
 export function limitarCantidad(cantidad: number, stock: number, minimo = 1) {
   if (!Number.isInteger(stock) || stock < minimo) return 0;
@@ -31,7 +31,8 @@ export default function useCarrito(idCliente: number, token: string, idNegocio: 
         const clave = `bulkmarket-carrito-${idCliente}`;
         const local = localStorage.getItem(clave);
         if (local) {
-          let antiguo: Carrito = null;
+          // Copia previa al carrito en servidor, cuando era de un solo vendedor.
+          let antiguo: { idNegocio?: number; items?: ItemCarrito[] } | null = null;
           try { antiguo = JSON.parse(local); } catch { /* Datos locales inválidos. */ }
           if (!valor && antiguo && antiguo.idNegocio !== idNegocio && Array.isArray(antiguo.items)) {
             const items = antiguo.items.filter(item => Number.isInteger(item.version) && item.version > 0)
@@ -57,13 +58,13 @@ export default function useCarrito(idCliente: number, token: string, idNegocio: 
     return () => { cancelado = true; activo.current = false; window.clearInterval(intervalo); window.removeEventListener('focus', cargar); };
   }, [idCliente, token, idNegocio]);
 
-  async function guardar(valor: Pick<NonNullable<Carrito>, 'idNegocio' | 'nombreNegocio' | 'items'> | null) {
+  async function guardar(items: Pick<ItemCarrito, 'idProducto' | 'version' | 'cantidad'>[]) {
     if (!listo || ocupado.current) { setAviso('Esperá a que termine de actualizarse el carrito e intentá nuevamente.'); return false; }
     ocupado.current = true;
     setProcesando(true);
     revision.current++;
     try {
-      mostrar(await api.guardarCarrito(valor?.items ?? [], token));
+      mostrar(await api.guardarCarrito(items, token));
       if (activo.current) setAviso('');
       return true;
     } catch (error) {
@@ -90,24 +91,21 @@ export default function useCarrito(idCliente: number, token: string, idNegocio: 
     if (producto.idNegocio === idNegocio) { setAviso('No podés comprar productos de tu propio negocio.'); return false; }
     const unidades = limitarCantidad(cantidad, producto.stock, producto.cantidadMinimaCompra ?? 1);
     if (!unidades) return false;
-    const previo = actual.current;
-    if (previo && previo.idNegocio !== producto.idNegocio && !window.confirm(`Tu carrito tiene productos de ${previo.nombreNegocio}. ¿Vaciarlo para comprar a otro vendedor?`)) return false;
-    const items = previo?.idNegocio === producto.idNegocio ? [...previo.items] : [];
+    // El carrito admite varios vendedores: se suma al resto sin vaciarlo.
+    const items = actual.current?.items ?? [];
     const existente = items.find(item => item.idProducto === producto.idProducto);
-    const nuevo = { idProducto: producto.idProducto, version: producto.version, nombre: producto.nombre,
-      precioBase: producto.precioBase, precioUnitario: producto.precioBase, preciosEscalonados: producto.preciosEscalonados, stock: producto.stock, cantidadMinimaCompra: producto.cantidadMinimaCompra, imagen: producto.imagenes[0],
+    const nuevo = { idProducto: producto.idProducto, version: producto.version,
       cantidad: limitarCantidad((existente?.version === producto.version ? existente.cantidad : 0) + unidades, producto.stock, producto.cantidadMinimaCompra ?? 1) };
-    return guardar({ idNegocio: producto.idNegocio, nombreNegocio: producto.negocio?.nombreComercial ?? 'Vendedor',
-      items: [...items.filter(item => item.idProducto !== producto.idProducto), nuevo] });
+    return guardar([...items.filter(item => item.idProducto !== producto.idProducto), nuevo]);
   }
   function actualizarCantidad(id: number, cantidad: number) {
     const previo = actual.current;
     if (!previo) return;
-    return guardar({ ...previo, items: previo.items.map(item => item.idProducto === id ? { ...item, cantidad: limitarCantidad(cantidad, item.stock, item.cantidadMinimaCompra ?? 1) } : item) });
+    return guardar(previo.items.map(item => item.idProducto === id ? { ...item, cantidad: limitarCantidad(cantidad, item.stock, item.cantidadMinimaCompra ?? 1) } : item));
   }
   function quitar(id: number) {
     const previo = actual.current;
-    if (previo) return guardar({ ...previo, items: previo.items.filter(item => item.idProducto !== id) });
+    if (previo) return guardar(previo.items.filter(item => item.idProducto !== id));
   }
-  return { carrito, avisoCarrito, procesando, confirmar, agregar, actualizarCantidad, quitar, vaciar: () => guardar(null) };
+  return { carrito, avisoCarrito, procesando, confirmar, agregar, actualizarCantidad, quitar, vaciar: () => guardar([]) };
 }

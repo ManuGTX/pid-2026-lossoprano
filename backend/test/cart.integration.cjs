@@ -11,20 +11,21 @@ const { ProductosService } = require('../dist/products/products.service');
 const { Categoria } = require('../dist/categories/category.entity');
 const { PrecioEscalonado } = require('../dist/products/price-tier.entity');
 const { CategoriasService } = require('../dist/categories/categories.service');
-const { Pedido } = require('../dist/products/order.entity');
+const { Pedido, Suborden } = require('../dist/products/order.entity');
 const { PedidosService } = require('../dist/products/orders.service');
 const { randomUUID } = require('node:crypto');
 
 test('persistencia y reglas del carrito en PostgreSQL, con tablas temporales', async () => {
   const db = new DataSource({ type: 'postgres',
     url: process.env.TEST_DATABASE_URL ?? 'postgres://bulkmarket:bulkmarket@localhost:5432/bulkmarket',
-    entities: [Producto, Negocio, Cliente, CarritoItem, Categoria, PrecioEscalonado, Pedido], synchronize: false });
+    entities: [Producto, Negocio, Cliente, CarritoItem, Categoria, PrecioEscalonado, Pedido, Suborden], synchronize: false });
   await db.initialize();
   const runner = db.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
   try {
-    await runner.query(`CREATE TEMP TABLE pedido (id_pedido serial PRIMARY KEY, id_cliente integer NOT NULL, id_negocio_comprador integer NOT NULL, id_negocio_vendedor integer NOT NULL, clave_confirmacion uuid NOT NULL, direccion_entrega varchar(255) NOT NULL, condicion_pago varchar(20) NOT NULL, estado varchar(20) DEFAULT 'CONFIRMADO', items jsonb NOT NULL, total numeric(20,2) NOT NULL, creado_en timestamptz DEFAULT now(), UNIQUE(id_cliente, clave_confirmacion))`);
+    await runner.query('CREATE TEMP TABLE pedido (id_pedido serial PRIMARY KEY, id_cliente integer NOT NULL, id_negocio_comprador integer NOT NULL, clave_confirmacion uuid NOT NULL, total numeric(20,2) NOT NULL, creado_en timestamptz DEFAULT now(), UNIQUE(id_cliente, clave_confirmacion))');
+    await runner.query(`CREATE TEMP TABLE suborden (id_suborden serial PRIMARY KEY, id_pedido integer NOT NULL REFERENCES pedido(id_pedido) ON DELETE CASCADE, id_negocio_vendedor integer NOT NULL, nombre_vendedor varchar(150) NOT NULL, id_negocio_comprador integer NOT NULL, nombre_comprador varchar(150) NOT NULL, direccion_entrega varchar(255) NOT NULL, condicion_pago varchar(20) NOT NULL, estado varchar(20) NOT NULL DEFAULT 'PENDIENTE', items jsonb NOT NULL, total numeric(20,2) NOT NULL, creado_en timestamptz DEFAULT now(), actualizado_en timestamptz DEFAULT now())`);
     await runner.query('CREATE TEMP TABLE negocio (id_negocio serial PRIMARY KEY, razon_social varchar(150), nombre_comercial varchar(150), identificacion_fiscal varchar(50), telefono varchar(40), direccion varchar(255), monto_minimo_orden decimal(12,2) NOT NULL DEFAULT 0)');
     await runner.query('CREATE TEMP TABLE cliente (id_cliente serial PRIMARY KEY, id_negocio integer REFERENCES negocio(id_negocio) ON DELETE CASCADE, email varchar(180), password_hash varchar, rol varchar(20))');
     await runner.query('CREATE TEMP TABLE categoria (id_categoria serial PRIMARY KEY, nombre varchar(100) NOT NULL, clave varchar(100) NOT NULL, id_negocio integer REFERENCES negocio(id_negocio) ON DELETE CASCADE, UNIQUE (id_negocio, clave))');
@@ -51,7 +52,13 @@ test('persistencia y reglas del carrito en PostgreSQL, con tablas temporales', a
     const importado = await carrito.guardar(1, { items: [{ ...item, cantidad: 1 }], importar: true });
     assert.equal(importado.items[0].cantidad, 5);
     await assert.rejects(carrito.guardar(3, { items: [item] }), e => e.getStatus() === 400);
-    await assert.rejects(carrito.guardar(1, { items: [item, { idProducto: otro.idProducto, version: otro.version, cantidad: 1 }] }), e => e.getStatus() === 400);
+    // Un carrito puede combinar vendedores: cada uno lleva su propio subtotal.
+    const mixto = await carrito.guardar(1, { items: [item, { idProducto: otro.idProducto, version: otro.version, cantidad: 1 }] });
+    assert.deepEqual(mixto.vendedores.map(v => [v.idNegocio, v.nombreNegocio, v.subtotal]), [[2, 'Vendedor', '50.00'], [3, 'Otro negocio', '10.00']]);
+    assert.equal(mixto.subtotal, '60.00');
+    assert.deepEqual(mixto.items.map(i => i.idNegocio), [2, 3]);
+    await assert.rejects(carrito.guardar(2, { items: [{ idProducto: otro.idProducto, version: otro.version, cantidad: 1 }] }), e => e.getStatus() === 400);
+    await carrito.guardar(1, { items: [item] });
     assert.equal((await carrito.obtener(1)).items.length, 1);
     await carrito.guardar(2, { items: [item] });
     await productos.actualizar(producto.idProducto, 2, { ...dto, precioBase: 12 });
@@ -73,13 +80,13 @@ test('persistencia y reglas del carrito en PostgreSQL, con tablas temporales', a
     await runner.query('UPDATE negocio SET monto_minimo_orden = 50 WHERE id_negocio = 2');
     const incompleto = await carrito.guardar(1, { items: [linea] });
     assert.equal(incompleto.subtotal, '30.00');
-    assert.equal(incompleto.faltanteMinimo, '20.00');
+    assert.equal(incompleto.vendedores[0].faltanteMinimo, '20.00');
     assert.equal(incompleto.cumpleMinimos, false);
     const completo = await carrito.guardar(1, { items: [{ ...linea, cantidad: 5 }] });
-    assert.equal(completo.faltanteMinimo, '0.00');
+    assert.equal(completo.vendedores[0].faltanteMinimo, '0.00');
     assert.equal(completo.cumpleMinimos, true);
     await runner.query('UPDATE negocio SET monto_minimo_orden = 60 WHERE id_negocio = 2');
-    assert.equal((await carrito.obtener(1)).faltanteMinimo, '10.00');
+    assert.equal((await carrito.obtener(1)).vendedores[0].faltanteMinimo, '10.00');
     assert.equal((await carrito.obtener(1)).items.length, 1);
     await productos.actualizar(minimoProducto.idProducto, 2, { ...dto, cantidadMinimaCompra: 4 });
     assert.equal(await carrito.obtener(1), null);
@@ -98,24 +105,57 @@ test('persistencia y reglas del carrito en PostgreSQL, con tablas temporales', a
       assert.equal(resultado.items[0].precioUnitario, unitario);
       assert.equal(resultado.subtotal, subtotal);
     }
-    const pedidos = new PedidosService({ transaction: callback => runner.manager.transaction(callback) });
-    const compra = { items: [{ ...lineaEscalonada, cantidad: 60 }], total: '480.00', direccionEntrega: 'San Martín 123', condicionPago: 'TRANSFERENCIA', claveConfirmacion: randomUUID() };
-    await carrito.guardar(2, { items: compra.items });
-    await assert.rejects(pedidos.confirmar(1, { ...compra, total: '1.00' }), e => e.getStatus() === 409);
-    assert.equal((await productos.buscarUno(escalonado.idProducto)).stock, 100);
+    // Checkout con dos vendedores: una orden general y una suborden independiente por vendedor.
+    const pedidos = new PedidosService({ transaction: callback => runner.manager.transaction(callback), getRepository: entidad => runner.manager.getRepository(entidad) });
+    const stock = async producto => (await productos.buscarUno(producto.idProducto)).stock;
+    const conflicto = e => e.getStatus() === 409;
+    const compra = { items: [{ ...lineaEscalonada, cantidad: 60 }, { idProducto: otro.idProducto, version: otro.version, cantidad: 2 }], total: '500.00', claveConfirmacion: randomUUID(), entregas: [
+      { idNegocio: 2, direccionEntrega: 'San Martín 123', condicionPago: 'TRANSFERENCIA' },
+      { idNegocio: 3, direccionEntrega: 'Belgrano 45', condicionPago: 'CONTADO' },
+    ] };
+    await carrito.guardar(1, { items: compra.items });
+    await carrito.guardar(2, { items: [compra.items[0]] });
+    await assert.rejects(pedidos.confirmar(1, { ...compra, total: '1.00' }), conflicto);
+    await assert.rejects(pedidos.confirmar(1, { ...compra, entregas: [compra.entregas[0]] }), conflicto);
+    await runner.query('UPDATE negocio SET monto_minimo_orden = 20.01 WHERE id_negocio = 3');
+    await assert.rejects(pedidos.confirmar(1, compra), conflicto);
+    await runner.query('UPDATE negocio SET monto_minimo_orden = 20 WHERE id_negocio = 3');
+    assert.equal(await stock(escalonado), 100);
     const confirmado = await pedidos.confirmar(1, compra);
-    assert.equal(confirmado.direccionEntrega, compra.direccionEntrega);
-    assert.equal(confirmado.condicionPago, 'TRANSFERENCIA');
-    assert.equal(confirmado.items[0].precioUnitario, '8.00');
-    assert.equal(confirmado.total, '480.00');
+    assert.equal(confirmado.total, '500.00');
+    assert.deepEqual(confirmado.subordenes.map(s => [s.idNegocioVendedor, s.nombreVendedor, s.nombreComprador, s.estado, s.total, s.direccionEntrega, s.condicionPago]), [
+      [2, 'Vendedor', 'Comprador', 'PENDIENTE', '480.00', 'San Martín 123', 'TRANSFERENCIA'],
+      [3, 'Otro negocio', 'Comprador', 'PENDIENTE', '20.00', 'Belgrano 45', 'CONTADO'],
+    ]);
+    assert.equal(confirmado.subordenes[0].items[0].precioUnitario, '8.00');
     assert.equal(await carrito.obtener(1), null);
-    assert.equal((await productos.buscarUno(escalonado.idProducto)).stock, 40);
+    assert.equal(await stock(escalonado), 40);
+    assert.equal(await stock(otro), 3);
     assert.equal((await productos.buscarUno(escalonado.idProducto)).version, escalonado.version);
-    assert.equal((await pedidos.confirmar(1, compra)).idPedido, confirmado.idPedido);
-    assert.equal((await productos.buscarUno(escalonado.idProducto)).stock, 40);
-    await assert.rejects(pedidos.confirmar(2, { ...compra, claveConfirmacion: randomUUID() }), e => e.getStatus() === 409);
+    const reintento = await pedidos.confirmar(1, compra);
+    assert.equal(reintento.idPedido, confirmado.idPedido);
+    assert.equal(reintento.subordenes.length, 2);
+    assert.equal(await stock(escalonado), 40);
+    await assert.rejects(pedidos.confirmar(2, { ...compra, items: [compra.items[0]], entregas: [compra.entregas[0]], total: '480.00', claveConfirmacion: randomUUID() }), conflicto);
     assert.equal(await runner.manager.getRepository(Pedido).count(), 1);
+    assert.equal(await runner.manager.getRepository(Suborden).count(), 2);
     assert.equal((await carrito.obtener(2)).items.length, 1);
+    assert.deepEqual((await pedidos.listarCompras(1)).map(p => p.subordenes.length), [2]);
+    assert.deepEqual((await pedidos.listarVentas(2)).map(s => s.total), ['480.00']);
+    assert.equal((await pedidos.listarVentas(1)).length, 0);
+
+    // Estados: cada suborden avanza por separado; rechazar o cancelar devuelve su stock.
+    const [subVendedor, subOtro] = confirmado.subordenes.map(s => s.idSuborden);
+    assert.equal((await pedidos.cambiarEstado(subOtro, 3, 'RECHAZADA')).estado, 'RECHAZADA');
+    assert.equal(await stock(otro), 5);
+    assert.equal(await stock(escalonado), 40);
+    await assert.rejects(pedidos.cambiarEstado(subVendedor, 3, 'CONFIRMADA'), e => e.getStatus() === 404);
+    await assert.rejects(pedidos.cambiarEstado(subVendedor, 2, 'ENVIADA'), conflicto);
+    assert.equal((await pedidos.cambiarEstado(subVendedor, 2, 'CONFIRMADA')).estado, 'CONFIRMADA');
+    assert.equal((await pedidos.cambiarEstado(subVendedor, 1, 'CANCELADA')).estado, 'CANCELADA');
+    assert.equal(await stock(escalonado), 100);
+    await assert.rejects(pedidos.cambiarEstado(subVendedor, 2, 'PREPARADA'), conflicto);
+    assert.deepEqual((await pedidos.listarCompras(1))[0].subordenes.map(s => s.estado), ['CANCELADA', 'RECHAZADA']);
     const sinTramos = await productos.actualizar(escalonado.idProducto, 2, { ...dto, stock: 100 });
     assert.deepEqual(sinTramos.preciosEscalonados, []);
 
