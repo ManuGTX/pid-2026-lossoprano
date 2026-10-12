@@ -218,3 +218,34 @@ select{font:inherit}
 .categorias-lista small{color:#6e7c74;font-size:12px}
 .categorias-lista .danger{padding:8px 12px;width:auto}
 @media(max-width:480px){.tramo-fila{grid-template-columns:1fr 1fr}.tramo-fila .link{grid-column:1/-1;padding:0;justify-self:start}}
+.carrito-vendedor{display:flex;flex-direction:column;gap:12px;padding-bottom:16px;border-bottom:1px solid #e2e6dd}
+.carrito-vendedor>.muted{margin:0}
+.carrito-subtotal-vendedor{font-size:14px;padding-top:10px}
+.carrito-entrega .field:last-child{margin-bottom:0}
+.pedido-resumen{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:10px}
+.pedido-resumen li{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 12px;border:1px solid #e2e6dd;border-radius:9px;background:#fff}
+.pedido-resumen small{grid-column:1/-1;color:#6e7c74;font-size:12px}
+.pedidos{margin:40px auto;padding:0 max(5vw,28px) 60px;max-width:800px;display:flex;flex-direction:column;gap:18px}
+.pedidos-tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #dde2d7}
+.pedidos-tabs button{border:0;background:none;padding:0 0 13px;color:#718078;font-weight:600}
+.pedidos-tabs .active{color:#5c346f;border-bottom:2px solid #5c346f;margin-bottom:-1px}
+.pedido{display:flex;flex-direction:column;gap:12px;padding:20px;background:#fffdf8;border:1px solid #e2e6dd;border-radius:12px}
+.pedido>header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pedido h2{font-size:19px;margin:0}
+.pedido .muted{margin:0}
+.suborden{display:flex;flex-direction:column;gap:10px;padding:14px 16px;background:#fff;border:1px solid #e2e6dd;border-radius:9px}
+.suborden>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.suborden>header div{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+.suborden small{color:#6e7c74;font-size:12px}
+.suborden-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.suborden-items li,.suborden-total{display:flex;justify-content:space-between;gap:12px}
+.suborden-items li span:last-child,.suborden-total b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.suborden-total{padding-top:8px;border-top:1px solid #e2e6dd}
+.suborden-acciones{display:flex;flex-wrap:wrap;gap:10px}
+.suborden-acciones .primary,.suborden-acciones .danger{width:auto;padding:9px 14px}
+.estado-suborden{flex:none;font:500 11px 'DM Mono';letter-spacing:.08em;text-transform:uppercase;padding:6px 9px;border-radius:4px;color:#7a5a12;background:#fbf1d3}
+.estado-suborden.confirmada,.estado-suborden.preparada,.estado-suborden.enviada{color:#27546b;background:#e3f0f6}
+.estado-suborden.entregada{color:#3e6e28;background:#eff5df}
+.estado-suborden.rechazada,.estado-suborden.cancelada{color:#9b3823;background:#fff0ed}
+@media(max-width:760px){.pedidos{margin:22px auto;padding:0 16px 40px}}
+@media(max-width:480px){.navbar-tabs{overflow-x:auto;scrollbar-width:none}}

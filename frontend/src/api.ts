@@ -1,7 +1,13 @@
 export type Rol = 'COMPRADOR' | 'VENDEDOR';
 export type CondicionPago = 'CONTADO' | 'TRANSFERENCIA' | 'CUENTA_CORRIENTE';
-export type ConfirmacionPedido = { direccionEntrega: string; condicionPago: CondicionPago; claveConfirmacion: string; total: string; items: Pick<ItemCarrito, 'idProducto' | 'version' | 'cantidad'>[] };
-export type PedidoConfirmado = { idPedido: number; total: string; direccionEntrega: string; condicionPago: CondicionPago };
+export type EstadoSuborden = 'PENDIENTE' | 'CONFIRMADA' | 'PREPARADA' | 'ENVIADA' | 'ENTREGADA' | 'RECHAZADA' | 'CANCELADA';
+export type EntregaSuborden = { idNegocio: number; direccionEntrega: string; condicionPago: CondicionPago };
+export type ConfirmacionPedido = { claveConfirmacion: string; total: string; entregas: EntregaSuborden[]; items: Pick<ItemCarrito, 'idProducto' | 'version' | 'cantidad'>[] };
+export type LineaPedido = { idProducto: number; nombre: string; cantidad: number; precioUnitario: string; subtotal: string };
+export type Suborden = { idSuborden: number; idPedido: number; idNegocioVendedor: number; nombreVendedor: string; idNegocioComprador: number; nombreComprador: string;
+  direccionEntrega: string; condicionPago: CondicionPago; estado: EstadoSuborden; items: LineaPedido[]; total: string; creadoEn: string; actualizadoEn: string };
+// Orden general de una compra, con una suborden por vendedor.
+export type Pedido = { idPedido: number; total: string; creadoEn: string; subordenes: Suborden[] };
 
 export type Negocio = {
   montoMinimoOrden?: string;
@@ -45,8 +51,10 @@ export type FiltrosProductos = {
   idNegocio?: number;
 };
 
-export type ItemCarrito = { idProducto: number; version: number; nombre: string; precioBase: string; precioUnitario: string; preciosEscalonados: PrecioEscalonado[]; cantidad: number; stock: number; cantidadMinimaCompra?: number | null; imagen?: string };
-export type Carrito = { idNegocio: number; nombreNegocio: string; items: ItemCarrito[]; subtotal: string; montoMinimoOrden: string; faltanteMinimo: string; cumpleMinimos: boolean } | null;
+export type ItemCarrito = { idProducto: number; idNegocio: number; version: number; nombre: string; precioBase: string; precioUnitario: string; preciosEscalonados: PrecioEscalonado[]; cantidad: number; stock: number; cantidadMinimaCompra?: number | null; imagen?: string };
+export type VendedorCarrito = { idNegocio: number; nombreNegocio: string; subtotal: string; montoMinimoOrden: string; faltanteMinimo: string; cumpleMinimos: boolean };
+// subtotal y cumpleMinimos resumen todo el carrito; cada vendedor tiene los suyos.
+export type Carrito = { subtotal: string; cumpleMinimos: boolean; vendedores: VendedorCarrito[]; items: ItemCarrito[] } | null;
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
 export const ASSET_URL = API_URL.replace(/\/api\/?$/, '');
@@ -69,7 +77,11 @@ async function solicitud<T>(ruta: string, opciones: RequestInit = {}, token?: st
 }
 
 export const api = {
-  confirmarPedido: (datos: ConfirmacionPedido, token: string) => solicitud<PedidoConfirmado>('/pedidos', { method: 'POST', body: JSON.stringify(datos) }, token),
+  confirmarPedido: (datos: ConfirmacionPedido, token: string) => solicitud<Pedido>('/pedidos', { method: 'POST', body: JSON.stringify(datos) }, token),
+  misCompras: (token: string) => solicitud<Pedido[]>('/pedidos/compras', {}, token),
+  misVentas: (token: string) => solicitud<Suborden[]>('/pedidos/ventas', {}, token),
+  cambiarEstadoSuborden: (idSuborden: number, estado: EstadoSuborden, token: string) =>
+    solicitud<Suborden>(`/pedidos/subordenes/${idSuborden}/estado`, { method: 'PATCH', body: JSON.stringify({ estado }) }, token),
   obtenerCarrito: (token: string) => solicitud<Carrito>('/carrito', {}, token),
   guardarCarrito: (items: Pick<ItemCarrito, 'idProducto' | 'version' | 'cantidad'>[], token: string, importar = false) =>
     solicitud<Carrito>('/carrito', { method: 'PUT', body: JSON.stringify({ items, importar }) }, token),
