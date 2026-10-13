@@ -3,11 +3,12 @@ const { put } = require('@vercel/blob');
 const { readFile } = require('node:fs/promises');
 const { resolve, sep, extname } = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { cloudConfig } = require('./cloud-config.cjs');
+const { cloudConfig, publicBlobOrigin } = require('./cloud-config.cjs');
 
 async function main() {
   const config = cloudConfig();
   if (!config.BLOB_READ_WRITE_TOKEN || !config.BLOB_PUBLIC_URL) throw new Error('Configurá Blob en backend/.env.cloud.');
+  const origen = publicBlobOrigin(config.BLOB_PUBLIC_URL);
   const raiz = resolve(__dirname, '../uploads');
   const tipos = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' };
   const cliente = new Client({ connectionString: config.DATABASE_URL });
@@ -38,7 +39,7 @@ async function main() {
           const blob = await put(`productos/${producto.id_negocio}/${randomUUID()}${extension}`, archivo.buffer, {
             access: 'public', contentType: archivo.tipo, token: config.BLOB_READ_WRITE_TOKEN,
           });
-          if (new URL(blob.url).origin !== config.BLOB_PUBLIC_URL.replace(/\/$/, '')) throw new Error('El token y BLOB_PUBLIC_URL apuntan a stores distintos.');
+          if (new URL(blob.url).origin !== origen) throw new Error('El token y BLOB_PUBLIC_URL apuntan a stores distintos.');
           subidas.set(clave, blob.url);
         }
         nuevas.push(subidas.get(clave));

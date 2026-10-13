@@ -8,6 +8,17 @@ const { ProductosController } = require('../dist/products/products.controller');
 const { CrearProductoDto } = require('../dist/products/dto/crear-producto.dto');
 const { ROLES_KEY } = require('../dist/auth/roles.decorator');
 
+test('la migración detecta un origen mal pegado antes de subir archivos', () => {
+  const { publicBlobOrigin } = require('../scripts/cloud-config.cjs');
+  const origen = 'https://example.public.blob.vercel-storage.com';
+  assert.equal(publicBlobOrigin(origen), origen);
+  assert.equal(publicBlobOrigin(origen + '/'), origen);
+  assert.equal(publicBlobOrigin(origen.toUpperCase()), origen);
+  for (const valor of ['BLOB_PUBLIC_URL=' + origen, origen + '/foto.png', origen + '?x=1', 'https://vercel.com', origen.replace('https:', 'http:')]) {
+    assert.throws(() => publicBlobOrigin(valor), /BLOB_PUBLIC_URL/);
+  }
+});
+
 test('las imágenes de Blob deben pertenecer al store y al vendedor autenticado', () => {
   const previas = { ...process.env };
   try {

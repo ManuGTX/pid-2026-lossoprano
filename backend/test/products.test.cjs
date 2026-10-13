@@ -97,9 +97,19 @@ test('el carrito conserva solamente productos existentes con la misma versión',
   assert.deepEqual(await service.validarCarrito({ items: [] }, 9), []);
 });
 
-test('los endpoints de edición y borrado requieren rol vendedor', () => {
-  for (const metodo of ['actualizar', 'eliminar']) {
+test('los endpoints de edición, reposición y borrado requieren rol vendedor', () => {
+  for (const metodo of ['actualizar', 'agregarStock', 'eliminar']) {
     assert.deepEqual(Reflect.getMetadata(ROLES_KEY, ProductosController.prototype[metodo]), ['VENDEDOR']);
+  }
+});
+
+test('agregar stock exige unidades enteras positivas dentro del límite de PostgreSQL', () => {
+  const { AgregarStockDto } = require('../dist/products/dto/agregar-stock.dto');
+  for (const cantidad of [undefined, null, true, '2', 0, -1, 1.5, 2147483648]) {
+    assert.ok(validateSync(plainToInstance(AgregarStockDto, { cantidad })).length);
+  }
+  for (const cantidad of [1, 25, 2147483647]) {
+    assert.equal(validateSync(plainToInstance(AgregarStockDto, { cantidad })).length, 0);
   }
 });
 

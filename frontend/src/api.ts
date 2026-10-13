@@ -114,10 +114,12 @@ export const api = {
     }
     return respuesta.json();
   },
+  agregarStock: (id: number, cantidad: number, token: string) =>
+    solicitud<Producto>(`/productos/${id}/stock`, { method: 'PATCH', body: JSON.stringify({ cantidad }) }, token),
   eliminarProducto: (id: number, token: string) => solicitud(`/productos/${id}`, { method: 'DELETE' }, token),
   validarCarrito: (items: { idProducto: number; version: number }[], token: string) =>
     solicitud<number[]>('/productos/carrito/validar', { method: 'POST', body: JSON.stringify({ items }) }, token),
-  crearProducto: async (datos: FormData, token: string): Promise<void> => {
+  crearProducto: async (datos: FormData, token: string): Promise<Producto> => {
     const respuesta = await fetch(`${API_URL}/productos`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -127,6 +129,7 @@ export const api = {
       const cuerpo = await respuesta.json().catch(() => ({}));
       throw new Error(Array.isArray(cuerpo.message) ? cuerpo.message[0] : cuerpo.message ?? 'No se pudo crear el producto.');
     }
+    return respuesta.json();
   },
   categoriasDisponibles: (token: string) => solicitud<CategoriaDisponible[]>('/categorias', {}, token),
   crearCategoria: (nombre: string, token: string) =>

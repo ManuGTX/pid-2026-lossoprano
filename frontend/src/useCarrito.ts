@@ -21,6 +21,7 @@ export default function useCarrito(idCliente: number, token: string, idNegocio: 
     activo.current = true;
     let cancelado = false;
     let cargando = false;
+    let falloCarga = false;
     async function cargar() {
       if (ocupado.current || cargando) return;
       cargando = true;
@@ -45,11 +46,17 @@ export default function useCarrito(idCliente: number, token: string, idNegocio: 
         if (cancelado || revisionConsulta !== revision.current) return;
         if (actual.current?.items.some(item => !valor?.items.some(nuevo => nuevo.idProducto === item.idProducto))) {
           setAviso('Tu carrito se actualizó: algunos productos fueron retirados o modificados.');
+        } else if (falloCarga) {
+          setAviso('');
         }
+        falloCarga = false;
         mostrar(valor);
         setListo(true);
       } catch (error) {
-        if (!cancelado) setAviso(error instanceof Error ? error.message : 'No se pudo cargar el carrito.');
+        if (!cancelado) {
+          falloCarga = true;
+          setAviso(error instanceof Error ? error.message : 'No se pudo cargar el carrito.');
+        }
       } finally { cargando = false; }
     }
     void cargar();

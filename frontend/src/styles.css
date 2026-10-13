@@ -249,3 +249,25 @@ select{font:inherit}
 .estado-suborden.rechazada,.estado-suborden.cancelada{color:#9b3823;background:#fff0ed}
 @media(max-width:760px){.pedidos{margin:22px auto;padding:0 16px 40px}}
 @media(max-width:480px){.navbar-tabs{overflow-x:auto;scrollbar-width:none}}
+
+/* Acciones del catálogo del vendedor y modales de productos. */
+.mis-productos-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+.mis-productos-header h2{margin:0}
+.producto-card-editar{display:flex;flex-direction:column;gap:8px;width:100%;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.producto-card-editar:focus-visible{outline:2px solid #6c3d82;outline-offset:4px;border-radius:8px}
+.producto-acciones{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid #e2e6dd}
+.stock-boton{border:1px solid #d4bddf;border-radius:8px;background:#f3eaf7;color:#6c3d82;padding:8px 10px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.stock-boton:hover{background:#eadbf1}
+.stock-modal{width:min(480px,calc(100% - 32px))}
+.stock-producto{font-weight:600;font-size:18px;margin:0 0 16px;overflow-wrap:anywhere}
+.stock-resumen{background:#f3eaf7;border-radius:8px;padding:14px;color:#6c3d82}
+.stock-aclaracion{font-size:13px;line-height:1.5}
+.stock-acciones{display:flex;align-items:center;justify-content:flex-end;gap:20px;margin-top:24px}
+.editar-producto-contenido .primary{width:auto;min-width:175px}
+@media(max-width:760px){
+  .mis-productos-header{align-items:stretch;flex-direction:column}
+  .editar-producto-contenido{padding:24px 18px}
+  .editar-producto-contenido .primary{width:100%;min-width:0}
+  .stock-acciones{flex-direction:column-reverse;gap:16px}
+  .producto-acciones{align-items:stretch;flex-direction:column}
+}

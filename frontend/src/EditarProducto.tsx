@@ -1,53 +1,18 @@
-import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { api, imagenUrl, Producto } from './api';
 import CampoCategoria, { EstadoCategorias } from './CampoCategoria';
 import CampoPreciosEscalonados from './CampoPreciosEscalonados';
+import ModalProducto from './ModalProducto';
 
 export default function EditarProducto({ producto, token, categorias, alCerrar, alGuardar, alEliminar }: {
   producto: Producto; token: string; categorias: EstadoCategorias; alCerrar: () => void;
   alGuardar: (producto: Producto) => void; alEliminar: (id: number) => void;
 }) {
-  const dialogo = useRef<HTMLDialogElement>(null);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
   const [imagenes, setImagenes] = useState<File[]>([]);
   const [vistas, setVistas] = useState<string[]>([]);
 
-  useLayoutEffect(() => {
-    const elemento = dialogo.current!;
-    const cuerpo = document.body;
-    const raiz = document.documentElement;
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
-    const propiedades = ['position', 'top', 'left', 'width', 'overflow', 'padding-right'] as const;
-    const estilosPrevios = propiedades.map(propiedad => ({
-      propiedad,
-      valor: cuerpo.style.getPropertyValue(propiedad),
-      prioridad: cuerpo.style.getPropertyPriority(propiedad),
-    }));
-    const overflowPrevio = raiz.style.getPropertyValue('overflow');
-    const prioridadOverflow = raiz.style.getPropertyPriority('overflow');
-    const anchoScrollbar = window.innerWidth - raiz.clientWidth;
-    const paddingDerecho = parseFloat(window.getComputedStyle(cuerpo).paddingRight) || 0;
-    cuerpo.style.position = 'fixed';
-    cuerpo.style.top = `-${scrollY}px`;
-    cuerpo.style.left = `-${scrollX}px`;
-    cuerpo.style.width = '100%';
-    cuerpo.style.overflow = 'hidden';
-    cuerpo.style.paddingRight = `${paddingDerecho + anchoScrollbar}px`;
-    raiz.style.overflow = 'hidden';
-    elemento.showModal();
-    return () => {
-      elemento.close();
-      for (const { propiedad, valor, prioridad } of estilosPrevios) {
-        if (valor) cuerpo.style.setProperty(propiedad, valor, prioridad);
-        else cuerpo.style.removeProperty(propiedad);
-      }
-      if (overflowPrevio) raiz.style.setProperty('overflow', overflowPrevio, prioridadOverflow);
-      else raiz.style.removeProperty('overflow');
-      window.scrollTo({ left: scrollX, top: scrollY, behavior: 'instant' });
-    };
-  }, []);
   useEffect(() => {
     const urls = imagenes.map(imagen => URL.createObjectURL(imagen));
     setVistas(urls);
@@ -86,12 +51,7 @@ export default function EditarProducto({ producto, token, categorias, alCerrar, 
     finally { setOcupado(false); }
   }
 
-  return <dialog ref={dialogo} className="editar-producto-modal" aria-labelledby="editar-producto-titulo"
-    onCancel={evento => { evento.preventDefault(); if (!ocupado) alCerrar(); }}
-    onClick={evento => { if (evento.target === evento.currentTarget && !ocupado) alCerrar(); }}>
-    <div className="editar-producto-contenido">
-      <header><h2 id="editar-producto-titulo">Editar producto</h2>
-        <button type="button" className="link" disabled={ocupado} onClick={alCerrar}>Cerrar ✕</button></header>
+  return <ModalProducto titulo="Editar producto" idTitulo="editar-producto-titulo" ocupado={ocupado} alCerrar={alCerrar}>
       <p className="muted">Al guardar cambios, este producto se quitará de los carritos de los compradores.</p>
       <form onSubmit={guardar}>
         <fieldset className="producto-campos" disabled={ocupado}>
@@ -118,6 +78,5 @@ export default function EditarProducto({ producto, token, categorias, alCerrar, 
       {error && <p className="error" role="alert">{error}</p>}
       <section className="danger-zone"><div><h2>Eliminar producto</h2><p>Se eliminará del catálogo y de los carritos.</p></div>
         <button type="button" className="danger" disabled={ocupado} onClick={eliminar}>Eliminar producto</button></section>
-    </div>
-  </dialog>;
+  </ModalProducto>;
 }

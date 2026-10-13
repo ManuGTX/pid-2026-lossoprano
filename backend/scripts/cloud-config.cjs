@@ -12,4 +12,16 @@ function cloudConfig() {
   return config;
 }
 
-module.exports = { cloudConfig };
+function publicBlobOrigin(value) {
+  let url;
+  try { url = new URL(value); } catch {
+    throw new Error('BLOB_PUBLIC_URL debe contener solo https://<store>.public.blob.vercel-storage.com; no repitas BLOB_PUBLIC_URL= dentro del valor.');
+  }
+  if (url.protocol !== 'https:' || !url.hostname.endsWith('.public.blob.vercel-storage.com') ||
+      url.pathname !== '/' || url.search || url.hash || url.username || url.password) {
+    throw new Error('BLOB_PUBLIC_URL debe ser el origen HTTPS del store público, sin nombre de archivo ni parámetros.');
+  }
+  return url.origin;
+}
+
+module.exports = { cloudConfig, publicBlobOrigin };

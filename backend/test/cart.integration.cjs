@@ -159,6 +159,26 @@ test('persistencia y reglas del carrito en PostgreSQL, con tablas temporales', a
     const sinTramos = await productos.actualizar(escalonado.idProducto, 2, { ...dto, stock: 100 });
     assert.deepEqual(sinTramos.preciosEscalonados, []);
 
+    // Reponer stock suma a la disponibilidad actual y conserva la versión y el carrito.
+    const reposicion = await productos.crear(2, dto, ['/reposicion.png']);
+    const lineaReposicion = { idProducto: reposicion.idProducto, version: reposicion.version, cantidad: 2 };
+    await carrito.guardar(1, { items: [lineaReposicion] });
+    const repuesto = await productos.agregarStock(reposicion.idProducto, 2, 7);
+    assert.equal(repuesto.stock, dto.stock + 7);
+    assert.equal(repuesto.version, reposicion.version);
+    assert.equal((await carrito.obtener(1)).items[0].cantidad, 2);
+    assert.equal((await carrito.obtener(1)).items[0].stock, dto.stock + 7);
+    await assert.rejects(productos.agregarStock(reposicion.idProducto, 3, 1), e => e.getStatus() === 404);
+    await assert.rejects(productos.agregarStock(2147483647, 2, 1), e => e.getStatus() === 404);
+    // Simula una compra previa: la reposición suma al stock restante, sin sobrescribirlo.
+    await runner.query('UPDATE producto SET stock = stock - 2 WHERE id_producto = $1', [reposicion.idProducto]);
+    assert.equal((await productos.agregarStock(reposicion.idProducto, 2, 3)).stock, dto.stock + 8);
+    await runner.query('UPDATE producto SET stock = 2147483645 WHERE id_producto = $1', [reposicion.idProducto]);
+    await assert.rejects(productos.agregarStock(reposicion.idProducto, 2, 3), e => e.getStatus() === 400);
+    assert.equal((await productos.buscarUno(reposicion.idProducto)).stock, 2147483645);
+    assert.equal((await productos.agregarStock(reposicion.idProducto, 2, 2)).stock, 2147483647);
+    await productos.eliminar(reposicion.idProducto, 2);
+
     // Categorías: la del vendedor no se borra mientras tenga productos.
     const propia = await categorias.crear(2, 'Vinos');
     await assert.rejects(categorias.crear(2, 'vinos'), e => e.getStatus() === 409);

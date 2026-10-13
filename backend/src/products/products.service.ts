@@ -141,6 +141,26 @@ export class ProductosService {
     });
   }
 
+  async agregarStock(idProducto: number, idNegocio: number, cantidad: number) {
+    return this.productos.manager.transaction(async manager => {
+      const repo = manager.getRepository(Producto);
+      // Serializa la reposición con compras y otras reposiciones del mismo producto.
+      const producto = await repo.findOne({
+        where: { idProducto, idNegocio },
+        lock: { mode: 'pessimistic_write' },
+        loadEagerRelations: false,
+      });
+      if (!producto) throw new NotFoundException('Producto no encontrado.');
+      if (producto.stock + cantidad > 2147483647) {
+        throw new BadRequestException('El stock no puede superar 2147483647 unidades.');
+      }
+      // Una reposición conserva la versión comercial y los carritos existentes.
+      await manager.query('UPDATE producto SET stock = stock + $1 WHERE id_producto = $2 AND id_negocio = $3',
+        [cantidad, idProducto, idNegocio]);
+      return ordenarTramos(await repo.findOneOrFail({ where: { idProducto, idNegocio } }));
+    });
+  }
+
   async eliminar(idProducto: number, idNegocio: number) {
     const resultado = await this.productos.delete({ idProducto, idNegocio });
     if (!resultado.affected) throw new NotFoundException('Producto no encontrado.');

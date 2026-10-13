@@ -41,6 +41,7 @@ function carritoPrueba(guardado, versiones, idNegocio = 1, servidor = { items: [
       if (name === 'react') return react;
       if (name === './api') {
         const obtener = async () => {
+          if (servidor.errorCarga) throw new Error(servidor.errorCarga);
           servidor.items = servidor.items.filter(item => versiones.get(item.idProducto) === item.version);
           if (!servidor.items.length) return null;
           const items = servidor.items.map(item => ({ ...producto, idNegocio: vendedorDe(item.idProducto), cantidadMinimaCompra: servidor.minimos?.[item.idProducto], ...item, precioBase: item.version === 2 ? '20.00' : '10.00' }));
@@ -81,6 +82,30 @@ const producto = { idProducto: 3, idNegocio: 2, version: 1, nombre: 'Producto', 
 // En el servidor simulado, el producto 9 es de otro vendedor.
 const vendedorDe = idProducto => idProducto === 9 ? 5 : 2;
 const esperar = () => new Promise(resolve => setImmediate(resolve));
+
+test('el aviso de conexión desaparece cuando una actualización del carrito tiene éxito', async () => {
+  const servidor = { items: [], errorCarga: 'Failed to fetch' };
+  const prueba = carritoPrueba(null, new Map(), 1, servidor);
+  prueba.render();
+  await esperar();
+  assert.equal(prueba.render().avisoCarrito, 'No se pudo cargar el carrito.');
+  delete servidor.errorCarga;
+  for (const actualizar of prueba.intervalos) await actualizar();
+  assert.equal(prueba.render().avisoCarrito, '');
+});
+
+test('las siguientes consultas conservan el aviso de productos retirados', async () => {
+  const versiones = new Map([[3, 1]]);
+  const servidor = { items: [{ idProducto: 3, version: 1, cantidad: 1 }] };
+  const prueba = carritoPrueba(null, versiones, 1, servidor);
+  prueba.render();
+  await esperar();
+  versiones.delete(3);
+  for (const actualizar of prueba.intervalos) await actualizar();
+  assert.match(prueba.render().avisoCarrito, /retirados o modificados/);
+  for (const actualizar of prueba.intervalos) await actualizar();
+  assert.match(prueba.render().avisoCarrito, /retirados o modificados/);
+});
 
 test('el carrito combina productos de distintos vendedores sin vaciarse', async () => {
   const prueba = carritoPrueba(null, new Map([[3, 1], [9, 1]]));

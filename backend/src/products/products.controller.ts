@@ -26,6 +26,7 @@ import { BuscarProductosDto } from './dto/buscar-productos.dto';
 import { CrearProductoDto } from './dto/crear-producto.dto';
 import { ProductosService } from './products.service';
 import { ValidarCarritoDto } from './dto/validar-carrito.dto';
+import { AgregarStockDto } from './dto/agregar-stock.dto';
 
 const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
 const TAMANIO_MAXIMO = 2 * 1024 * 1024;
@@ -110,6 +111,17 @@ export class ProductosController {
   ) {
     const rutas = await this.rutasImagenes(imagenes, dto, request.user.idNegocio);
     return this.productos.actualizar(id, request.user.idNegocio, dto, rutas.length ? rutas : undefined);
+  }
+
+  @Patch(':id/stock')
+  @UseGuards(RolesGuard)
+  @Roles(RolCliente.VENDEDOR)
+  agregarStock(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() request: { user: { idNegocio: number } },
+    @Body() dto: AgregarStockDto,
+  ) {
+    return this.productos.agregarStock(id, request.user.idNegocio, dto.cantidad);
   }
 
   @Delete(':id')
