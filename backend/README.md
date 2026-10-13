@@ -2,6 +2,8 @@
 
 API de BulkMarket para autenticación JWT y administración del negocio asociado a cada cuenta.
 
+Para publicar frontend, API, base de datos e imágenes en la nube, seguí [la guía de despliegue](../DEPLOYMENT.md).
+
 ## Inicio
 
 1. Desde `backend`, copiá `.env.example` a `.env` (`Copy-Item .env.example .env` en PowerShell). Definí `JWT_SECRET` y conservá `DATABASE_URL` si usás el PostgreSQL del compose; si usás otra base, ajustá sus credenciales.

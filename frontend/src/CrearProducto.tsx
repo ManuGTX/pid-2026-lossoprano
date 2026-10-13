@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { api, ASSET_URL, Producto } from './api';
+import { api, imagenUrl, Producto } from './api';
 import { formatCurrency } from './utils';
 import EditarProducto from './EditarProducto';
 import CampoCategoria, { GestionCategorias, useCategorias } from './CampoCategoria';
@@ -88,7 +88,7 @@ export default function CrearProducto({ token, listPosition = 'below' }: CrearPr
                 setProductoSeleccionado(producto);
               }
             }}>
-            {producto.imagenes[0] && <img src={`${ASSET_URL}${producto.imagenes[0]}`} alt={producto.nombre} />}
+            {producto.imagenes[0] && <img src={imagenUrl(producto.imagenes[0])} alt={producto.nombre} />}
             <div className="producto-info">
               <b>{producto.nombre}</b>
               <span className="muted">{producto.categoria.nombre}</span>

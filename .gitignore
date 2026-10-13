@@ -4,3 +4,10 @@
 
 # Guía local del proyecto
 /project_guidelines.md
+
+# Deployment credentials and database backups
+.vercel/
+.env*
+!.env.example
+!.env.cloud.example
+backups/

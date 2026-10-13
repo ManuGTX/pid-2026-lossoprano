@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { ASSET_URL, Carrito, CondicionPago, ConfirmacionPedido, Pedido } from './api';
+import { imagenUrl, Carrito, CondicionPago, ConfirmacionPedido, Pedido } from './api';
 import { CONDICIONES_PAGO, formatCurrency, siguienteTramo } from './utils';
 import useCarrito from './useCarrito';
 import CantidadCarrito from './CantidadCarrito';
@@ -65,7 +65,7 @@ export default function PanelCarrito({ estado, alCerrar, direccionInicial = '' }
                     {carrito.items.filter(item => item.idNegocio === vendedor.idNegocio).map(item => {
                       const proximo = siguienteTramo(item.preciosEscalonados, item.cantidad, item.stock);
                       return <li key={item.idProducto}>
-                        {item.imagen && <img src={`${ASSET_URL}${item.imagen}`} alt={item.nombre} />}
+                        {item.imagen && <img src={imagenUrl(item.imagen)} alt={item.nombre} />}
                         <div className="carrito-item-info">
                           <b>{item.nombre}</b>
                           <span className="muted carrito-precio-unitario">

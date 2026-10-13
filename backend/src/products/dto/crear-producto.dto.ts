@@ -7,6 +7,13 @@ export class PrecioEscalonadoDto {
 }
 
 export class CrearProductoDto {
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    try { return JSON.parse(value); } catch { return value; }
+  })
+  @IsOptional() @IsArray() @ArrayMaxSize(5) @IsString({ each: true })
+  imagenesSubidas?: string[];
+
   @Transform(({ value }) => value === '' || value == null ? null : Number(value))
   @IsOptional() @IsInt() @Min(1) @Max(2147483647)
   cantidadMinimaCompra: number | null = null;

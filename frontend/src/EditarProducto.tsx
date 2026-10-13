@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { api, ASSET_URL, Producto } from './api';
+import { api, imagenUrl, Producto } from './api';
 import CampoCategoria, { EstadoCategorias } from './CampoCategoria';
 import CampoPreciosEscalonados from './CampoPreciosEscalonados';
 
@@ -107,7 +107,7 @@ export default function EditarProducto({ producto, token, categorias, alCerrar, 
             <small>Vacío permite comprar desde una unidad. Si el stock es menor que el mínimo, el producto no estará disponible para comprar.</small>
           </label>
           <CampoPreciosEscalonados inicial={producto.preciosEscalonados} />
-          <div className="producto-imagenes">{(imagenes.length ? vistas : producto.imagenes.map(ruta => `${ASSET_URL}${ruta}`)).map((ruta, indice) =>
+          <div className="producto-imagenes">{(imagenes.length ? vistas : producto.imagenes.map(ruta => imagenUrl(ruta))).map((ruta, indice) =>
             <img key={ruta} src={ruta} alt={`Imagen ${indice + 1} del producto`} />)}</div>
           <label className="field"><span>Reemplazar imágenes</span><input name="imagenes" type="file" accept="image/jpeg,image/png,image/webp" multiple
             onChange={evento => setImagenes(Array.from(evento.target.files ?? []))} />

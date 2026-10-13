@@ -57,7 +57,8 @@ export type VendedorCarrito = { idNegocio: number; nombreNegocio: string; subtot
 export type Carrito = { subtotal: string; cumpleMinimos: boolean; vendedores: VendedorCarrito[]; items: ItemCarrito[] } | null;
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
-export const ASSET_URL = API_URL.replace(/\/api\/?$/, '');
+const ASSET_URL = API_URL.replace(/\/api\/?$/, '');
+export const imagenUrl = (ruta: string) => /^https:\/\//.test(ruta) ? ruta : `${ASSET_URL}${ruta}`;
 
 async function solicitud<T>(ruta: string, opciones: RequestInit = {}, token?: string): Promise<T> {
   const respuesta = await fetch(`${API_URL}${ruta}`, {
@@ -76,6 +77,24 @@ async function solicitud<T>(ruta: string, opciones: RequestInit = {}, token?: st
   return respuesta.json();
 }
 
+async function subirImagenes(datos: FormData, token: string): Promise<FormData> {
+  const formulario = new FormData();
+  const rutas: string[] = [];
+  for (const [clave, valor] of datos.entries()) {
+    if (clave !== 'imagenes') { formulario.append(clave, valor); continue; }
+    const archivo = new FormData();
+    archivo.append('imagen', valor);
+    const respuesta = await fetch(`${API_URL}/productos/imagenes`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: archivo,
+    });
+    const cuerpo = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) throw new Error(cuerpo.message ?? 'No se pudo subir la imagen.');
+    rutas.push(cuerpo.url);
+  }
+  if (rutas.length) formulario.set('imagenesSubidas', JSON.stringify(rutas));
+  return formulario;
+}
+
 export const api = {
   confirmarPedido: (datos: ConfirmacionPedido, token: string) => solicitud<Pedido>('/pedidos', { method: 'POST', body: JSON.stringify(datos) }, token),
   misCompras: (token: string) => solicitud<Pedido[]>('/pedidos/compras', {}, token),
@@ -87,7 +106,7 @@ export const api = {
     solicitud<Carrito>('/carrito', { method: 'PUT', body: JSON.stringify({ items, importar }) }, token),
   actualizarProducto: async (id: number, datos: FormData, token: string): Promise<Producto> => {
     const respuesta = await fetch(`${API_URL}/productos/${id}`, {
-      method: 'PATCH', headers: { Authorization: `Bearer ${token}` }, body: datos,
+      method: 'PATCH', headers: { Authorization: `Bearer ${token}` }, body: await subirImagenes(datos, token),
     });
     if (!respuesta.ok) {
       const cuerpo = await respuesta.json().catch(() => ({}));
@@ -102,7 +121,7 @@ export const api = {
     const respuesta = await fetch(`${API_URL}/productos`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
-      body: datos,
+      body: await subirImagenes(datos, token),
     });
     if (!respuesta.ok) {
       const cuerpo = await respuesta.json().catch(() => ({}));

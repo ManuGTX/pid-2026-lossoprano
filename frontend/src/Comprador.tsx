@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { api, ASSET_URL, Negocio, Producto } from './api';
+import { api, imagenUrl, Negocio, Producto } from './api';
 import { formatCurrency, precioParaCantidad } from './utils';
 import { TablaPrecios } from './CampoPreciosEscalonados';
 
@@ -98,7 +98,7 @@ export default function PanelComprador({ token, idNegocio, estadoCarrito, abrirC
       <div className="producto-grilla">
         {productos.map(producto => (
           <article className="producto-card" key={producto.idProducto} onClick={() => setDetalle(producto)}>
-            {producto.imagenes[0] && <img src={`${ASSET_URL}${producto.imagenes[0]}`} alt={producto.nombre} />}
+            {producto.imagenes[0] && <img src={imagenUrl(producto.imagenes[0])} alt={producto.nombre} />}
             <div className="producto-info">
               <span className="producto-marca">{producto.negocio?.nombreComercial}</span>
               <b>{producto.nombre}</b>
@@ -156,7 +156,7 @@ function DetalleProducto({ producto, mensaje, esPropio, alCerrar, alAgregar }: {
               <div className="carousel-slider">
                 <img
                   key={`current-${currentImageIndex}`}
-                  src={`${ASSET_URL}${producto.imagenes[currentImageIndex]}`}
+                  src={imagenUrl(producto.imagenes[currentImageIndex])}
                   alt={producto.nombre}
                 />
               </div>
@@ -183,7 +183,7 @@ function DetalleProducto({ producto, mensaje, esPropio, alCerrar, alAgregar }: {
             </>
           ) : (
             <img
-              src={`${ASSET_URL}${producto.imagenes[0]}`}
+              src={imagenUrl(producto.imagenes[0])}
               alt={producto.nombre}
             />
           )}

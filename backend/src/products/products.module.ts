@@ -11,6 +11,7 @@ import { Categoria } from '../categories/category.entity';
 import { Pedido, Suborden } from './order.entity';
 import { PedidosController } from './orders.controller';
 import { PedidosService } from './orders.service';
+import { ImagenesService } from './images.service';
 
-@Module({ imports: [TypeOrmModule.forFeature([Producto, CarritoItem, PrecioEscalonado, Categoria, Pedido, Suborden])], controllers: [ProductosController, CarritoController, PedidosController], providers: [ProductosService, CarritoService, PedidosService] })
+@Module({ imports: [TypeOrmModule.forFeature([Producto, CarritoItem, PrecioEscalonado, Categoria, Pedido, Suborden])], controllers: [ProductosController, CarritoController, PedidosController], providers: [ProductosService, CarritoService, PedidosService, ImagenesService] })
 export class ProductosModule {}

@@ -6,13 +6,15 @@
     "start:dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main",
-    "test": "npm run build && node --test test/products.test.cjs test/checkout.test.cjs test/cart.integration.cjs",
+    "test": "npm run build && node --test test/products.test.cjs test/checkout.test.cjs test/cart.integration.cjs test/images.test.cjs",
     "test:products": "npm run build && node --test test/products.test.cjs",
     "test:checkout": "npm run build && node --test test/checkout.test.cjs",
     "test:cart:integration": "npm run build && node --test test/cart.integration.cjs",
     "migrar:categorias": "node migrar.js migrations/004-categorias-precios-escalonados.sql",
     "migrar:subordenes": "node migrar.js migrations/006-subordenes.sql",
-    "lint": "eslint \"src/**/*.ts\""
+    "lint": "eslint \"src/**/*.ts\"",
+    "db:restore:cloud": "node scripts/restore-cloud.cjs",
+    "images:migrate:cloud": "node scripts/migrate-images.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -22,6 +24,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
+    "@vercel/blob": "^2.8.1",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
@@ -48,5 +51,8 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.71.2"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
