@@ -28,6 +28,8 @@ Categorías y precios escalonados: cada producto tiene `idCategoria` (una genera
 
 Pedidos: `POST /pedidos` confirma el carrito y genera una orden general con una suborden por vendedor. Recibe `items`, `total`, `claveConfirmacion` (UUID, permite reintentar sin duplicar) y `entregas: [{ idNegocio, direccionEntrega, condicionPago }]`, una por cada vendedor del carrito. Cada suborden valida su monto mínimo; si alguna falla no se confirma ninguna. `GET /pedidos/compras` lista las órdenes del negocio comprador y `GET /pedidos/ventas` las subórdenes recibidas por un vendedor. `PATCH /pedidos/subordenes/:id/estado` cambia el estado: el vendedor pasa de pendiente a confirmada o rechazada, y luego a preparada, enviada y entregada; el comprador puede cancelar una suborden pendiente o confirmada. Rechazar o cancelar devuelve el stock. Para producción aplicar `migrations/005-checkout.sql` y `migrations/006-subordenes.sql`; en desarrollo, si la base ya tiene pedidos, correr `npm run migrar:subordenes` antes de iniciar la API para conservarlos.
 
+La orden general devuelve `estado: EN_CURSO | COMPLETADA`, calculado a partir de todas sus subórdenes al confirmar, reintentar o listar compras. Solo se muestra completada cuando tiene al menos una suborden y todas están entregadas o cerradas (rechazadas o canceladas). El estado no se guarda por separado, por lo que no requiere migración y refleja los cambios de cada vendedor. El vendedor administra los pedidos recibidos y repone stock con `PATCH /productos/:id/stock`; el comprador consulta seguimiento e historial conservando los datos de la compra.
+
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | POST | `/auth/registro` | Registra cliente y negocio. Roles: `COMPRADOR`, `VENDEDOR`. |

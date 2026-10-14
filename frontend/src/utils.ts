@@ -1,6 +1,7 @@
-import type { CondicionPago, EstadoSuborden } from './api';
+import type { CondicionPago, EstadoPedido, EstadoSuborden } from './api';
 
 export const CONDICIONES_PAGO: Record<CondicionPago, string> = { CONTADO: 'Contado', TRANSFERENCIA: 'Transferencia', CUENTA_CORRIENTE: 'Cuenta corriente' };
+export const ESTADOS_PEDIDO: Record<EstadoPedido, string> = { EN_CURSO: 'En curso', COMPLETADA: 'Completada' };
 export const ESTADOS_SUBORDEN: Record<EstadoSuborden, string> = { PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', PREPARADA: 'Preparada',
   ENVIADA: 'Enviada', ENTREGADA: 'Entregada', RECHAZADA: 'Rechazada', CANCELADA: 'Cancelada' };
 type Accion = { estado: EstadoSuborden; etiqueta: string };

@@ -269,6 +269,14 @@ Esta sección reemplaza lo que el apartado del checkout del 1 de octubre dice so
 
 Verificación de este cambio: compilación y lint del backend, compilación del frontend, 26 pruebas de backend (incluida la integración PostgreSQL con carrito mixto, subórdenes, estados y devolución de stock) y 16 de frontend. Además se recorrió el flujo completo por HTTP contra una base descartable (registro, carrito de dos vendedores, confirmación, reintento, listados y cambios de estado) y se aplicó dos veces la migración 006 sobre una base con pedidos del formato anterior. No se verificó visualmente en navegador.
 
+## Estado general, seguimiento e historial, 14 de octubre de 2026
+
+La API incorpora `estado` a la orden general en el checkout, los reintentos y el listado de compras. Devuelve COMPLETADA únicamente si hay subórdenes y todas están ENTREGADA, RECHAZADA o CANCELADA; estas dos últimas se consideran cerradas. Cualquier suborden pendiente, confirmada, preparada o enviada mantiene la orden EN_CURSO. Se calcula al consultar, sin columna adicional ni migración.
+
+Pedidos muestra Seguimiento para compras EN_CURSO e Historial para COMPLETADA, conservando los estados, importes y datos históricos de cada vendedor. Incluye un botón Actualizar pedidos y la fecha de última actualización de cada suborden. Los vendedores comienzan en Pedidos recibidos, con las acciones existentes para avanzar o rechazar, y siguen reponiendo stock desde Mis Productos → Agregar stock.
+
+Verificación: compilación de ambas aplicaciones, lint de backend, 35 pruebas de backend (incluida integración PostgreSQL en tablas temporales) y 24 de frontend. Las nuevas pruebas cubren las combinaciones de estados, el cierre de la última suborden, reintentos, stock e historial, y las vistas y acciones por rol mediante renderizado de React. No se realizó una verificación visual en navegador.
+
 ## Próximos pasos y precauciones
 
 El guardado del carrito no reserva stock; solo la confirmación del checkout lo descuenta, y el rechazo o la cancelación de una suborden lo devuelve. La edición manual actual envía un stock absoluto y debe revisarse si se requiere detectar formularios abiertos antes de una venta. La sección Pedidos se carga al abrirla y tras cada acción; no se actualiza sola si la otra parte cambia el estado.

@@ -16,6 +16,20 @@ export enum EstadoSuborden {
   CANCELADA = 'CANCELADA',
 }
 
+export enum EstadoPedido {
+  EN_CURSO = 'EN_CURSO',
+  COMPLETADA = 'COMPLETADA',
+}
+
+// Rechazada y cancelada cierran la suborden sin entrega.
+export const subordenFinalizada = (estado: EstadoSuborden) =>
+  estado === EstadoSuborden.ENTREGADA || estado === EstadoSuborden.RECHAZADA || estado === EstadoSuborden.CANCELADA;
+
+export function conEstadoPedido(pedido: Pedido): Pedido & { estado: EstadoPedido } {
+  const completa = pedido.subordenes.length > 0 && pedido.subordenes.every(suborden => subordenFinalizada(suborden.estado));
+  return { ...pedido, estado: completa ? EstadoPedido.COMPLETADA : EstadoPedido.EN_CURSO };
+}
+
 // Cambios de estado que puede hacer cada parte. Los estados sin transiciones son finales.
 export const TRANSICIONES: Record<EstadoSuborden, { vendedor: EstadoSuborden[]; comprador: EstadoSuborden[] }> = {
   PENDIENTE: { vendedor: [EstadoSuborden.CONFIRMADA, EstadoSuborden.RECHAZADA], comprador: [EstadoSuborden.CANCELADA] },

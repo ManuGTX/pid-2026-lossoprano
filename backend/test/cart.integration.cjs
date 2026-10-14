@@ -122,6 +122,7 @@ test('persistencia y reglas del carrito en PostgreSQL, con tablas temporales', a
     await runner.query('UPDATE negocio SET monto_minimo_orden = 20 WHERE id_negocio = 3');
     assert.equal(await stock(escalonado), 100);
     const confirmado = await pedidos.confirmar(1, compra);
+    assert.equal(confirmado.estado, 'EN_CURSO');
     assert.equal(confirmado.total, '500.00');
     assert.deepEqual(confirmado.subordenes.map(s => [s.idNegocioVendedor, s.nombreVendedor, s.nombreComprador, s.estado, s.total, s.direccionEntrega, s.condicionPago]), [
       [2, 'Vendedor', 'Comprador', 'PENDIENTE', '480.00', 'San Martín 123', 'TRANSFERENCIA'],
@@ -147,6 +148,7 @@ test('persistencia y reglas del carrito en PostgreSQL, con tablas temporales', a
     // Estados: cada suborden avanza por separado; rechazar o cancelar devuelve su stock.
     const [subVendedor, subOtro] = confirmado.subordenes.map(s => s.idSuborden);
     assert.equal((await pedidos.cambiarEstado(subOtro, 3, 'RECHAZADA')).estado, 'RECHAZADA');
+    assert.equal((await pedidos.listarCompras(1))[0].estado, 'EN_CURSO');
     assert.equal(await stock(otro), 5);
     assert.equal(await stock(escalonado), 40);
     await assert.rejects(pedidos.cambiarEstado(subVendedor, 3, 'CONFIRMADA'), e => e.getStatus() === 404);
@@ -156,6 +158,8 @@ test('persistencia y reglas del carrito en PostgreSQL, con tablas temporales', a
     assert.equal(await stock(escalonado), 100);
     await assert.rejects(pedidos.cambiarEstado(subVendedor, 2, 'PREPARADA'), conflicto);
     assert.deepEqual((await pedidos.listarCompras(1))[0].subordenes.map(s => s.estado), ['CANCELADA', 'RECHAZADA']);
+    assert.equal((await pedidos.listarCompras(1))[0].estado, 'COMPLETADA');
+    assert.equal((await pedidos.confirmar(1, compra)).estado, 'COMPLETADA');
     const sinTramos = await productos.actualizar(escalonado.idProducto, 2, { ...dto, stock: 100 });
     assert.deepEqual(sinTramos.preciosEscalonados, []);
 

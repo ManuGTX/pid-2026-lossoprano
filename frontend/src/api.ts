@@ -1,13 +1,14 @@
 export type Rol = 'COMPRADOR' | 'VENDEDOR';
 export type CondicionPago = 'CONTADO' | 'TRANSFERENCIA' | 'CUENTA_CORRIENTE';
 export type EstadoSuborden = 'PENDIENTE' | 'CONFIRMADA' | 'PREPARADA' | 'ENVIADA' | 'ENTREGADA' | 'RECHAZADA' | 'CANCELADA';
+export type EstadoPedido = 'EN_CURSO' | 'COMPLETADA';
 export type EntregaSuborden = { idNegocio: number; direccionEntrega: string; condicionPago: CondicionPago };
 export type ConfirmacionPedido = { claveConfirmacion: string; total: string; entregas: EntregaSuborden[]; items: Pick<ItemCarrito, 'idProducto' | 'version' | 'cantidad'>[] };
 export type LineaPedido = { idProducto: number; nombre: string; cantidad: number; precioUnitario: string; subtotal: string };
 export type Suborden = { idSuborden: number; idPedido: number; idNegocioVendedor: number; nombreVendedor: string; idNegocioComprador: number; nombreComprador: string;
   direccionEntrega: string; condicionPago: CondicionPago; estado: EstadoSuborden; items: LineaPedido[]; total: string; creadoEn: string; actualizadoEn: string };
 // Orden general de una compra, con una suborden por vendedor.
-export type Pedido = { idPedido: number; total: string; creadoEn: string; subordenes: Suborden[] };
+export type Pedido = { idPedido: number; estado: EstadoPedido; total: string; creadoEn: string; subordenes: Suborden[] };
 
 export type Negocio = {
   montoMinimoOrden?: string;

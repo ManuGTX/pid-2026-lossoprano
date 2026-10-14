@@ -5,7 +5,7 @@ import { Negocio } from '../business/business.entity';
 import { CarritoItem } from './cart-item.entity';
 import { Producto } from './products.entity';
 import { PrecioEscalonado, precioParaCantidad } from './price-tier.entity';
-import { EstadoSuborden, LineaPedido, Pedido, Suborden, TRANSICIONES } from './order.entity';
+import { conEstadoPedido, EstadoSuborden, LineaPedido, Pedido, Suborden, TRANSICIONES } from './order.entity';
 import { ConfirmarPedidoDto } from './dto/confirmar-pedido.dto';
 
 const centavos = (valor: string) => BigInt(valor.replace('.', ''));
@@ -21,7 +21,7 @@ export class PedidosService {
       if (!cliente) throw new UnauthorizedException('La cuenta ya no existe.');
       const pedidos = manager.getRepository(Pedido);
       const anterior = await pedidos.findOne({ where: { idCliente, claveConfirmacion: dto.claveConfirmacion }, relations: { subordenes: true } });
-      if (anterior) return anterior;
+      if (anterior) return conEstadoPedido(anterior);
       const carrito = manager.getRepository(CarritoItem);
       const filas = await carrito.find({ where: { idCliente }, order: { idProducto: 'ASC' } });
       if (!filas.length || filas.length !== dto.items.length || filas.some(fila => !dto.items.some(item =>
@@ -71,13 +71,14 @@ export class PedidosService {
       const repo = manager.getRepository(Suborden);
       pedido.subordenes = await repo.save(subordenes.map(suborden => repo.create({ ...suborden, idPedido: pedido.idPedido })));
       await carrito.delete({ idCliente });
-      return pedido;
+      return conEstadoPedido(pedido);
     });
   }
 
-  listarCompras(idNegocio: number) {
-    return this.db.getRepository(Pedido).find({ where: { idNegocioComprador: idNegocio }, relations: { subordenes: true },
+  async listarCompras(idNegocio: number) {
+    const pedidos = await this.db.getRepository(Pedido).find({ where: { idNegocioComprador: idNegocio }, relations: { subordenes: true },
       order: { idPedido: 'DESC', subordenes: { idSuborden: 'ASC' } } });
+    return pedidos.map(conEstadoPedido);
   }
 
   listarVentas(idNegocio: number) {

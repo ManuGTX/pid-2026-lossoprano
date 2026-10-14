@@ -2,7 +2,7 @@ require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { PedidosService } = require('../dist/products/orders.service');
-const { TRANSICIONES } = require('../dist/products/order.entity');
+const { conEstadoPedido, TRANSICIONES } = require('../dist/products/order.entity');
 
 // Comprador (negocio 1) con productos de dos vendedores (negocios 2 y 3) en el carrito.
 function escenario() {
@@ -24,6 +24,8 @@ function escenario() {
       PrecioEscalonado: { findBy: async ({ idProducto }) => idProducto === 1 ? [{ cantidadMinima: 3, precioUnitario: '8.00' }] : [] },
       Negocio: { findOne: async ({ where }) => negocios[where.idNegocio] },
       Pedido: {
+        find: async ({ where }) => estado.pedidos.filter(p => p.idNegocioComprador === where.idNegocioComprador)
+          .map(p => ({ ...p, subordenes: estado.subordenes.filter(s => s.idPedido === p.idPedido) })),
         findOne: async ({ where }) => {
           const pedido = estado.pedidos.find(p => p.claveConfirmacion === where.claveConfirmacion);
           return pedido && { ...pedido, subordenes: estado.subordenes.filter(s => s.idPedido === pedido.idPedido) };
@@ -44,7 +46,7 @@ function escenario() {
     }[entidad.name]),
     query: async (sql, [cantidad, idProducto]) => { estado.stock[idProducto] += sql.includes('stock +') ? cantidad : -cantidad; },
   };
-  const servicio = new PedidosService({ transaction: async callback => {
+  const servicio = new PedidosService({ getRepository: manager.getRepository, transaction: async callback => {
     const antes = structuredClone(estado);
     try { return await callback(manager); } catch (error) { estado = antes; throw error; }
   } });
@@ -58,6 +60,7 @@ test('checkout genera una orden general y una suborden por vendedor; descuenta u
   const e = escenario();
   const pedido = await e.servicio.confirmar(1, e.dto);
   assert.equal(pedido.total, '34.00');
+  assert.equal(pedido.estado, 'EN_CURSO');
   assert.deepEqual(pedido.subordenes.map(s => [s.idNegocioVendedor, s.nombreVendedor, s.total, s.direccionEntrega, s.condicionPago, s.estado]), [
     [2, 'Vendedor A', '24.00', 'Calle 123', 'CONTADO', 'PENDIENTE'],
     [3, 'Vendedor B', '10.00', 'Depósito 9', 'CUENTA_CORRIENTE', 'PENDIENTE'],
@@ -137,4 +140,36 @@ test('rechazar o cancelar una suborden devuelve solo su stock y es definitivo', 
 test('entregada, rechazada y cancelada son estados finales', () => {
   assert.deepEqual(Object.keys(TRANSICIONES), ['PENDIENTE', 'CONFIRMADA', 'PREPARADA', 'ENVIADA', 'ENTREGADA', 'RECHAZADA', 'CANCELADA']);
   for (const estado of ['ENTREGADA', 'RECHAZADA', 'CANCELADA']) assert.deepEqual(TRANSICIONES[estado], { vendedor: [], comprador: [] });
+});
+
+test('la orden general solo se completa si todas las subórdenes están entregadas o cerradas', () => {
+  const finales = new Set(['ENTREGADA', 'RECHAZADA', 'CANCELADA']);
+  for (const primero of Object.keys(TRANSICIONES)) {
+    for (const segundo of Object.keys(TRANSICIONES)) {
+      const pedido = { subordenes: [{ estado: primero }, { estado: segundo }] };
+      assert.equal(conEstadoPedido(pedido).estado, finales.has(primero) && finales.has(segundo) ? 'COMPLETADA' : 'EN_CURSO', `${primero}, ${segundo}`);
+    }
+  }
+  assert.equal(conEstadoPedido({ subordenes: [] }).estado, 'EN_CURSO');
+});
+
+test('seguimiento y reintentos reflejan el cierre de la última suborden, conservando stock e historial', async () => {
+  const e = escenario();
+  await e.servicio.confirmar(1, e.dto);
+  assert.equal((await e.servicio.listarCompras(1))[0].estado, 'EN_CURSO');
+  assert.deepEqual(await e.servicio.listarCompras(9), []);
+  await e.servicio.cambiarEstado(2, 3, 'RECHAZADA');
+  for (const estado of ['CONFIRMADA', 'PREPARADA', 'ENVIADA']) {
+    await e.servicio.cambiarEstado(1, 2, estado);
+    assert.equal((await e.servicio.listarCompras(1))[0].estado, 'EN_CURSO');
+  }
+  await e.servicio.cambiarEstado(1, 2, 'ENTREGADA');
+  const completada = (await e.servicio.listarCompras(1))[0];
+  assert.equal(completada.estado, 'COMPLETADA');
+  assert.deepEqual(completada.subordenes.map(s => s.estado), ['ENTREGADA', 'RECHAZADA']);
+  assert.equal(completada.total, '34.00');
+  assert.equal(completada.subordenes[0].items[0].precioUnitario, '8.00');
+  assert.equal((await e.servicio.confirmar(1, e.dto)).estado, 'COMPLETADA');
+  assert.deepEqual(e.estado().stock, { 1: 7, 2: 10 });
+  assert.equal(e.estado().pedidos.length, 1);
 });
