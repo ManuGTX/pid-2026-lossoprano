@@ -193,7 +193,7 @@ La sesión JWT sí está en localStorage. No confundir eso con persistencia de c
 ## Detalles de interfaz y compatibilidad
 
 - Navbar: Perfil → Mis productos (solo vendedor) → Explorar; carrito accesible desde cualquier pestaña.
-- Navbar: Mis Compras está disponible para todas las cuentas y Pedidos solo para vendedores. Las pestañas se desplazan horizontalmente si no entran.
+- Navbar: Mis Compras está disponible para todas las cuentas y Pedidos solo para vendedores. Hasta 1100 px se accede a las secciones mediante Menú; por encima se muestran las solapas.
 - Al agregar productos se abre el carrito. Ya no se aplica el filtro de ese vendedor ni se pide vaciar el carrito al cambiar de vendedor.
 - El carrito agrupa los productos por vendedor, cada grupo con su subtotal, su barra de mínimo y, en el checkout, su entrega y su pago.
 - Mobile: logo solo «B», controles compactos, catálogo de dos columnas en el rango móvil configurado; en pantallas muy angostas vuelve a una columna.
@@ -284,6 +284,14 @@ Esta actualización reemplaza la navegación conjunta descrita en la sección de
 `Pedidos.tsx` recibe `tipo="compras" | "ventas"` y consulta únicamente `/pedidos/compras` o `/pedidos/ventas`, respectivamente. Cada sección se monta por separado para reiniciar su vista al navegar. El mensaje de confirmación del carrito dirige a Mis Compras. No requiere cambios de API ni migración de datos.
 
 Verificación: compilación del frontend y 28 pruebas aprobadas, incluidas las de navegación por rol, separación de consultas, clasificación de los siete estados y movimientos a historial tras entregar o rechazar. También se verificaron las dos secciones con la cuenta local del vendedor, la navegación del comprador y la interfaz móvil de 390 × 844, sin desbordamiento horizontal de la página en la vista del vendedor.
+
+## Menú para pantallas compactas, 15 de octubre de 2026
+
+El botón Menú reemplaza las solapas en pantallas de hasta 1100 px. Despliega las secciones en vertical, resalta la activa y mantiene el carrito y cierre de sesión en la barra. Se usa la misma navegación y las mismas condiciones de rol que en escritorio. El panel tiene altura máxima y desplazamiento vertical para pantallas bajas; la página no necesita desplazamiento horizontal para alcanzar una sección.
+
+El menú se cierra al elegir una sección, tocar fuera, abrir el carrito, pulsar Escape o ampliar la pantalla por encima de 1100 px. Elegir una sección o pulsar Escape devuelve el foco al botón. El botón declara `aria-expanded` y `aria-controls`; la lista sigue siendo una navegación normal con botones, sin roles de menú de aplicación.
+
+Verificación: compilación y 28 pruebas del frontend aprobadas. Revisión manual con comprador y vendedor: navegación, cierre al seleccionar, toque fuera, Escape y apertura del carrito. También se comprobó la lista completa del vendedor en 320 y 390 px, la navegación en 1024 px y el retorno a solapas en 1280 px.
 
 ## Próximos pasos y precauciones
 

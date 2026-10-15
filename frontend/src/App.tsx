@@ -1,4 +1,4 @@
-import { FormEvent, useState, useRef } from 'react';
+import { FormEvent, useEffect, useState, useRef } from 'react';
 import { api, Negocio, Rol, Sesion } from './api';
 import Comprador from './Comprador';
 import CrearProducto from './CrearProducto';
@@ -240,10 +240,38 @@ function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guarda
   const unidadesCarrito = estadoCarrito.carrito?.items.reduce((total, item) => total + item.cantidad, 0) ?? 0;
   const esComprador = sesion.cliente.rol === 'COMPRADOR';
   const [seccion, setSeccion] = useState<Seccion>(esComprador ? 'explorar' : 'perfil');
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const navegacionRef = useRef<HTMLDivElement>(null);
+  const menuBotonRef = useRef<HTMLButtonElement>(null);
   const lastClickRef = useRef(0);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  useEffect(() => {
+    if (!menuAbierto) return;
+    const cerrarAlSalir = (evento: PointerEvent) => {
+      if (!navegacionRef.current?.contains(evento.target as Node)) setMenuAbierto(false);
+    };
+    const cerrarConEscape = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') {
+        evento.preventDefault();
+        setMenuAbierto(false);
+        menuBotonRef.current?.focus();
+      }
+    };
+    const cerrarEnEscritorio = () => { if (window.innerWidth > 1100) setMenuAbierto(false); };
+    document.addEventListener('pointerdown', cerrarAlSalir);
+    document.addEventListener('keydown', cerrarConEscape);
+    window.addEventListener('resize', cerrarEnEscritorio);
+    return () => {
+      document.removeEventListener('pointerdown', cerrarAlSalir);
+      document.removeEventListener('keydown', cerrarConEscape);
+      window.removeEventListener('resize', cerrarEnEscritorio);
+    };
+  }, [menuAbierto]);
+
   const handleTabClick = (targetSection: Seccion) => {
+    setMenuAbierto(false);
+    if (menuAbierto) menuBotonRef.current?.focus();
     const now = Date.now();
     const timeSinceLastClick = now - lastClickRef.current;
 
@@ -307,7 +335,15 @@ function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guarda
     <main className={`dashboard ${claseRol}`}>
       <header className="navbar">
         <Marca />
-        <nav className="navbar-tabs" aria-label="Navegación principal">
+        <div className="navbar-navigation" ref={navegacionRef}>
+          <button type="button" className="navbar-menu-toggle" ref={menuBotonRef}
+            aria-expanded={menuAbierto} aria-controls="navegacion-principal" onClick={() => setMenuAbierto(abierto => !abierto)}>
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d={menuAbierto ? 'M6 6l12 12M6 18L18 6' : 'M4 6h16M4 12h16M4 18h16'} />
+            </svg>
+            Menú
+          </button>
+        <nav id="navegacion-principal" className={`navbar-tabs${menuAbierto ? ' abierto' : ''}`} aria-label="Navegación principal">
           <button
             type="button"
             className={`nav-tab ${seccion === 'perfil' ? 'active' : ''}`}
@@ -351,6 +387,7 @@ function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guarda
             Pedidos
           </button>}
         </nav>
+        </div>
         <div className="navbar-actions">
           <span className={`role-badge ${claseRol}`}>{nombreRol}</span>
           <button type="button" className="carrito-boton navbar-carrito" onClick={() => setCarritoAbierto(true)}

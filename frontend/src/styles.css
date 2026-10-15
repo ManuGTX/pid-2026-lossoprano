@@ -121,6 +121,22 @@
 }
 .navbar-tabs{gap:18px;min-width:0;overflow-x:auto;scrollbar-width:none}
 .navbar-tabs .nav-tab{flex-shrink:0;white-space:nowrap}
+.navbar-navigation{display:contents}
+.navbar-menu-toggle{display:none}
+@media(max-width:1100px){
+  .navbar{position:relative;height:64px;min-height:64px;flex-wrap:nowrap;gap:12px}
+  .navbar-navigation{display:flex;align-items:center;flex:1;min-width:0}
+  .navbar-menu-toggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 12px;border:1px solid #ced7ce;border-radius:7px;background:#fffdf8;color:#18352c;font-size:14px;font-weight:700}
+  .navbar-menu-toggle:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+  .vendedor .navbar-menu-toggle{color:#5c346f}
+  .navbar-navigation .navbar-tabs{display:none;position:absolute;z-index:40;top:calc(100% - 1px);left:12px;right:12px;max-height:min(70dvh,420px);overflow-x:hidden;overflow-y:auto;scrollbar-width:auto;overscroll-behavior:contain;flex-direction:column;align-items:stretch;gap:4px;padding:8px;background:#fffdf8;border:1px solid #e2e6dd;border-radius:0 0 12px 12px;box-shadow:0 12px 24px #18352c1f}
+  .navbar-navigation .navbar-tabs.abierto{display:flex}
+  .navbar-tabs .nav-tab{align-self:auto;justify-content:flex-start;min-height:48px;width:100%;padding:12px 14px;border-radius:6px;font-size:14px;text-align:left}
+  .navbar-tabs .nav-tab::after{display:none}
+  .comprador .navbar-tabs .nav-tab.active{background:#eff5df}
+  .vendedor .navbar-tabs .nav-tab.active{background:#f3eafa}
+  .navbar-tabs .nav-tab:focus-visible{outline:2px solid currentColor;outline-offset:-2px}
+}
 @media(max-width:480px){
   .navbar{height:64px;min-height:64px;flex-wrap:nowrap;padding:0 12px;gap:8px}
   .navbar-tabs{min-width:0;gap:8px}
@@ -250,7 +266,6 @@ select{font:inherit}
 .estado-suborden.entregada,.estado-pedido.completada{color:#3e6e28;background:#eff5df}
 .estado-suborden.rechazada,.estado-suborden.cancelada{color:#9b3823;background:#fff0ed}
 @media(max-width:760px){.pedidos{margin:22px auto;padding:0 16px 40px}}
-@media(max-width:480px){.navbar-tabs{overflow-x:auto;scrollbar-width:none}}
 
 /* Acciones del catálogo del vendedor y modales de productos. */
 .mis-productos-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
