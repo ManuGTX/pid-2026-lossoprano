@@ -364,14 +364,6 @@ function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guarda
           )}
           <button
             type="button"
-            className={`nav-tab ${seccion === 'explorar' ? 'active' : ''}`}
-            aria-current={seccion === 'explorar' ? 'page' : undefined}
-            onClick={() => handleTabClick('explorar')}
-          >
-            Explorar
-          </button>
-          <button
-            type="button"
             className={`nav-tab ${seccion === 'compras' ? 'active' : ''}`}
             aria-current={seccion === 'compras' ? 'page' : undefined}
             onClick={() => handleTabClick('compras')}
@@ -386,6 +378,14 @@ function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guarda
           >
             Pedidos
           </button>}
+          <button
+            type="button"
+            className={`nav-tab ${seccion === 'explorar' ? 'active' : ''}`}
+            aria-current={seccion === 'explorar' ? 'page' : undefined}
+            onClick={() => handleTabClick('explorar')}
+          >
+            Explorar
+          </button>
         </nav>
         </div>
         <div className="navbar-actions">
