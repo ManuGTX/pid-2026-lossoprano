@@ -135,12 +135,14 @@ for (const rol of ['COMPRADOR', 'VENDEDOR']) {
     const react = require('react');
     const App = cargar('App.tsx', { react, 'react/jsx-runtime': jsx, './api': { api: {} },
       './Comprador': { default: () => null }, './CrearProducto': { default: () => null },
-      './useCarrito': { default: () => ({ carrito: null }) }, './PanelCarrito': { default: () => null }, './Pedidos': { default: () => null },
+      './useCarrito': { default: () => ({ carrito: null }) }, './PanelCarrito': { default: () => null }, './Pedidos': { default: () => null }, './Dashboard': { default: () => null },
     }, { localStorage: { getItem: () => JSON.stringify({ accessToken: 'token', cliente: { idCliente: 1, rol },
       negocio: { idNegocio: 1, nombreComercial: 'Negocio', razonSocial: 'Negocio', identificacionFiscal: '12345678901', telefono: '1234567890', direccion: 'Calle 123' } }) } }).default;
     const html = renderToStaticMarkup(react.createElement(App));
     assert.match(html, /<button[^>]*>Mis Compras<\/button>/);
     if (rol === 'VENDEDOR') assert.match(html, /<button[^>]*>Pedidos<\/button>/);
     else assert.doesNotMatch(html, /<button[^>]*>Pedidos<\/button>/);
+    if (rol === 'VENDEDOR') assert.match(html, /<button[^>]*>Dashboard<\/button>/);
+    else assert.doesNotMatch(html, /<button[^>]*>Dashboard<\/button>/);
   });
 }

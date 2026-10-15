@@ -5,6 +5,7 @@ import CrearProducto from './CrearProducto';
 import useCarrito from './useCarrito';
 import PanelCarrito from './PanelCarrito';
 import Pedidos from './Pedidos';
+import Dashboard from './Dashboard';
 
 type Vista = 'ingreso' | 'registro';
 const negocioInicial = { razonSocial: '', nombreComercial: '', identificacionFiscal: '', telefono: '', direccion: '' };
@@ -232,7 +233,7 @@ function Registro({ alRegistrarse }: { alRegistrarse: (sesion: Sesion) => void }
   );
 }
 
-type Seccion = 'explorar' | 'perfil' | 'productos' | 'compras' | 'pedidos';
+type Seccion = 'explorar' | 'perfil' | 'productos' | 'compras' | 'pedidos' | 'dashboard';
 
 function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guardarSesion: (sesion: Sesion) => void; cerrarSesion: () => void }) {
   const estadoCarrito = useCarrito(sesion.cliente.idCliente, sesion.accessToken, sesion.negocio.idNegocio);
@@ -344,6 +345,14 @@ function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guarda
             Menú
           </button>
         <nav id="navegacion-principal" className={`navbar-tabs${menuAbierto ? ' abierto' : ''}`} aria-label="Navegación principal">
+          {!esComprador && <button
+            type="button"
+            className={`nav-tab ${seccion === 'dashboard' ? 'active' : ''}`}
+            aria-current={seccion === 'dashboard' ? 'page' : undefined}
+            onClick={() => handleTabClick('dashboard')}
+          >
+            Dashboard
+          </button>}
           <button
             type="button"
             className={`nav-tab ${seccion === 'perfil' ? 'active' : ''}`}
@@ -406,6 +415,11 @@ function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guarda
           </button>
         </div>
       </header>
+      {!esComprador && seccion === 'dashboard' && (
+        <div key={`dashboard-${refreshKey}`}>
+          <Dashboard token={sesion.accessToken} />
+        </div>
+      )}
       {seccion === 'explorar' && (
         <div key={`explorar-${refreshKey}`}>
           <Comprador token={sesion.accessToken} idNegocio={sesion.negocio.idNegocio} estadoCarrito={estadoCarrito} abrirCarrito={() => setCarritoAbierto(true)} />
