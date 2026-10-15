@@ -293,6 +293,20 @@ El menú se cierra al elegir una sección, tocar fuera, abrir el carrito, pulsar
 
 Verificación: compilación y 28 pruebas del frontend aprobadas. Revisión manual con comprador y vendedor: navegación, cierre al seleccionar, toque fuera, Escape y apertura del carrito. También se comprobó la lista completa del vendedor en 320 y 390 px, la navegación en 1024 px y el retorno a solapas en 1280 px.
 
+## Dashboard de ventas, 15 de octubre de 2026
+
+Se agregó la pestaña Dashboard al panel del vendedor, tanto en escritorio como en el menú compacto. Muestra cantidad de ventas entregadas, monto total, promedio por venta, los cinco productos más pedidos por unidades y la evolución de los últimos doce meses, incluido el actual. Mantiene los colores violetas, las tarjetas y el fondo del panel. En celular se acomoda en una columna.
+
+Para estas métricas se cuentan solamente subórdenes ENTREGADA. Cada suborden del negocio cuenta como una venta; el promedio es su monto total dividido por la cantidad de ventas. Los pedidos pendientes, confirmados, preparados, enviados, rechazados y cancelados quedan afuera. El resumen y el ranking usan todo el historial; las barras mensuales usan la fecha de entrega, en horario de Argentina. Esa fecha sale de `actualizadoEn`, porque entregada es un estado final y no admite cambios posteriores. Los meses sin ventas se muestran en cero.
+
+La pantalla está en `frontend/src/Dashboard.tsx` y los cálculos en `frontend/src/resumenVentas.ts`. Se reutiliza `api.misVentas`, que consulta `GET /pedidos/ventas`: la API ya exige JWT y rol VENDEDOR, y busca únicamente las subórdenes del negocio autenticado. El comprador no tiene la pestaña ni se le monta la pantalla. No se agregaron dependencias, tablas ni migraciones. Los nombres y cantidades del ranking salen de las líneas históricas, por lo que un producto eliminado sigue figurando en sus ventas anteriores.
+
+Los datos se consultan al abrir la pestaña y con Actualizar ventas. Si falla la consulta se muestra el error y se puede reintentar; si todavía no hay entregas se muestra un resumen en cero. Los cálculos se hacen en el frontend sobre el listado existente para mantener el cambio chico. Si el historial crece mucho, conviene pasar el resumen a una consulta agregada en la API.
+
+Verificación: compilación del frontend y 33 pruebas aprobadas. Se revisaron los cálculos, exclusión de estados sin entrega, ranking, cambio de año, fecha de entrega en horario argentino, errores y reintentos, además de la navegación por rol. También se probó en navegador con respuestas simuladas a 1440, 1280, 1100, 390 y 320 px, sin desbordamiento horizontal, y se revisaron las capturas de escritorio y celular. No se levantó PostgreSQL ni se probaron ventas reales contra la API en esta copia.
+
+Para verlo en local, levantar PostgreSQL con `docker compose up -d` desde `backend`, iniciar la API con `npm run start:dev` y la web con `npm run dev` desde `frontend`, en otra terminal. En una instalación nueva hay que copiar los `.env.example` sin pisar archivos existentes, configurar `JWT_SECRET` e instalar las dependencias con `npm ci` en cada carpeta (Node 22). Entrar en `http://localhost:5173` con una cuenta vendedora y abrir Dashboard. Para generar datos, comprar desde otro negocio y avanzar el pedido en Pedidos: confirmar, preparar, enviar y entregar. Después volver al Dashboard. No hace falta cargar datos de ejemplo ni reiniciar la base.
+
 ## Próximos pasos y precauciones
 
 El guardado del carrito no reserva stock; solo la confirmación del checkout lo descuenta, y el rechazo o la cancelación de una suborden lo devuelve. La edición manual actual envía un stock absoluto y debe revisarse si se requiere detectar formularios abiertos antes de una venta. La sección Pedidos se carga al abrirla y tras cada acción; no se actualiza sola si la otra parte cambia el estado.
