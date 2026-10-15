@@ -1,12 +1,13 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { api, EstadoSuborden, Pedido, Suborden } from './api';
-import { ACCIONES_COMPRADOR, ACCIONES_VENDEDOR, CONDICIONES_PAGO, ESTADOS_PEDIDO, ESTADOS_SUBORDEN, formatCurrency } from './utils';
+import { ACCIONES_COMPRADOR, ACCIONES_VENDEDOR, CONDICIONES_PAGO, ESTADOS_PEDIDO, ESTADOS_SUBORDEN, formatCurrency, subordenFinalizada } from './utils';
 
-type Vista = 'ventas' | 'seguimiento' | 'historial';
+type Vista = 'activos' | 'historial';
 const fecha = (valor: string) => new Date(valor).toLocaleDateString('es-AR');
 
-export default function Pedidos({ token, esVendedor }: { token: string; esVendedor: boolean }) {
-  const [vista, setVista] = useState<Vista>(esVendedor ? 'ventas' : 'seguimiento');
+export default function Pedidos({ token, tipo }: { token: string; tipo: 'compras' | 'ventas' }) {
+  const esVenta = tipo === 'ventas';
+  const [vista, setVista] = useState<Vista>('activos');
   const [compras, setCompras] = useState<Pedido[]>([]);
   const [ventas, setVentas] = useState<Suborden[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -15,9 +16,8 @@ export default function Pedidos({ token, esVendedor }: { token: string; esVended
 
   async function cargar() {
     try {
-      const [misCompras, misVentas] = await Promise.all([api.misCompras(token), esVendedor ? api.misVentas(token) : []]);
-      setCompras(misCompras);
-      setVentas(misVentas);
+      if (esVenta) setVentas(await api.misVentas(token));
+      else setCompras(await api.misCompras(token));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudieron cargar los pedidos.');
     } finally { setCargando(false); }
@@ -26,7 +26,7 @@ export default function Pedidos({ token, esVendedor }: { token: string; esVended
   useEffect(() => {
     void cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, tipo]);
 
   async function cambiarEstado(suborden: Suborden, estado: EstadoSuborden) {
     const devuelveStock = estado === 'RECHAZADA' || estado === 'CANCELADA';
@@ -50,20 +50,21 @@ export default function Pedidos({ token, esVendedor }: { token: string; esVended
       disabled={enCurso !== null} onClick={() => cambiarEstado(suborden, accion.estado)}>{accion.etiqueta}</button>);
 
   const comprasVisibles = compras.filter(pedido => vista === 'historial' ? pedido.estado === 'COMPLETADA' : pedido.estado === 'EN_CURSO');
+  const ventasVisibles = ventas.filter(suborden => subordenFinalizada(suborden.estado) === (vista === 'historial'));
   const vistas: { id: Vista; etiqueta: string }[] = [
-    ...(esVendedor ? [{ id: 'ventas' as const, etiqueta: 'Pedidos recibidos' }] : []),
-    { id: 'seguimiento', etiqueta: 'Seguimiento' }, { id: 'historial', etiqueta: 'Historial' },
+    { id: 'activos', etiqueta: esVenta ? 'Pedidos recibidos' : 'Seguimiento' },
+    { id: 'historial', etiqueta: 'Historial' },
   ];
 
   return (
     <>
       <section className="welcome">
-        <span className="eyebrow">PEDIDOS</span>
-        <h1>{esVendedor ? 'Gestioná tus pedidos' : 'Seguí tus pedidos'}</h1>
-        <p>{esVendedor ? 'Administrá los pedidos recibidos y actualizá tu stock desde Mis Productos.' : 'Consultá el seguimiento de tus compras y el historial de órdenes completadas.'}</p>
+        <span className="eyebrow">{esVenta ? 'PEDIDOS' : 'MIS COMPRAS'}</span>
+        <h1>{esVenta ? 'Gestioná tus pedidos' : 'Seguí tus compras'}</h1>
+        <p>{esVenta ? 'Administrá los pedidos recibidos y consultá el historial de los entregados, rechazados o cancelados.' : 'Consultá el seguimiento de tus compras y el historial de órdenes completadas.'}</p>
       </section>
       <section className="pedidos">
-        <div className="pedidos-tabs" aria-label="Tipo de pedidos">
+        <div className="pedidos-tabs" role="group" aria-label={esVenta ? 'Pedidos recibidos' : 'Mis compras'}>
           {vistas.map(opcion => <button key={opcion.id} type="button" aria-pressed={vista === opcion.id}
             className={vista === opcion.id ? 'active' : ''} onClick={() => setVista(opcion.id)}>{opcion.etiqueta}</button>)}
         </div>
@@ -71,12 +72,12 @@ export default function Pedidos({ token, esVendedor }: { token: string; esVended
           onClick={() => { setError(''); setCargando(true); void cargar(); }}>Actualizar pedidos</button>
         {error && <p className="error" role="alert">{error}</p>}
         {cargando && <p className="muted">Cargando pedidos…</p>}
-        {!cargando && vista === 'ventas' && (ventas.length === 0 ? <p className="muted">Todavía no recibiste pedidos.</p> : ventas.map(suborden =>
+        {!cargando && esVenta && (ventasVisibles.length === 0 ? <p className="muted">{vista === 'historial' ? 'Todavía no tenés pedidos recibidos finalizados.' : 'No tenés pedidos recibidos en curso.'}</p> : ventasVisibles.map(suborden =>
           <TarjetaSuborden key={suborden.idSuborden} suborden={suborden}
             titulo={`Orden #${suborden.idSuborden} · ${suborden.nombreComprador}`} detalle={`Pedido #${suborden.idPedido} del ${fecha(suborden.creadoEn)}`}>
             {acciones(suborden, ACCIONES_VENDEDOR)}
           </TarjetaSuborden>))}
-        {!cargando && vista !== 'ventas' && (comprasVisibles.length === 0 ? <p className="muted">{vista === 'historial' ? 'Todavía no tenés órdenes completadas.' : 'No tenés compras en curso.'}</p> : comprasVisibles.map(pedido =>
+        {!cargando && !esVenta && (comprasVisibles.length === 0 ? <p className="muted">{vista === 'historial' ? 'Todavía no tenés órdenes completadas.' : 'No tenés compras en curso.'}</p> : comprasVisibles.map(pedido =>
           <article className="pedido" key={pedido.idPedido}>
             <header>
               <h2>Pedido #{pedido.idPedido}</h2>

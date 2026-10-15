@@ -54,7 +54,7 @@ export default function PanelCarrito({ estado, alCerrar, direccionInicial = '' }
                   <small>Entrega: {suborden.direccionEntrega}. Pago: {CONDICIONES_PAGO[suborden.condicionPago]} (simulado).</small>
                 </li>)}
               </ul>
-              <p className="muted">Cada vendedor tiene que confirmar su parte. Podés seguir el estado desde Pedidos.</p>
+              <p className="muted">Cada vendedor tiene que confirmar su parte. Podés seguir el estado desde Mis Compras.</p>
             </div> : !carrito || carrito.items.length === 0 ? (
               <p className="muted">Todavía no agregaste productos.</p>
             ) : (

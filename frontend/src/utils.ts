@@ -4,6 +4,7 @@ export const CONDICIONES_PAGO: Record<CondicionPago, string> = { CONTADO: 'Conta
 export const ESTADOS_PEDIDO: Record<EstadoPedido, string> = { EN_CURSO: 'En curso', COMPLETADA: 'Completada' };
 export const ESTADOS_SUBORDEN: Record<EstadoSuborden, string> = { PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', PREPARADA: 'Preparada',
   ENVIADA: 'Enviada', ENTREGADA: 'Entregada', RECHAZADA: 'Rechazada', CANCELADA: 'Cancelada' };
+export const subordenFinalizada = (estado: EstadoSuborden) => estado === 'ENTREGADA' || estado === 'RECHAZADA' || estado === 'CANCELADA';
 type Accion = { estado: EstadoSuborden; etiqueta: string };
 // Cambios de estado que ofrece la interfaz a cada parte; la API vuelve a validarlos.
 export const ACCIONES_VENDEDOR: Partial<Record<EstadoSuborden, Accion[]>> = {

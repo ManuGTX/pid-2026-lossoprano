@@ -119,7 +119,8 @@
   .auth-layout .auth-card{order:0}
   .auth-layout .hero{order:1}
 }
-.navbar-tabs{gap:18px}
+.navbar-tabs{gap:18px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.navbar-tabs .nav-tab{flex-shrink:0;white-space:nowrap}
 @media(max-width:480px){
   .navbar{height:64px;min-height:64px;flex-wrap:nowrap;padding:0 12px;gap:8px}
   .navbar-tabs{min-width:0;gap:8px}

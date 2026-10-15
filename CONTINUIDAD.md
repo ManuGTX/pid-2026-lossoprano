@@ -1,6 +1,6 @@
 # BulkMarket — guía de continuidad
 
-Última revisión: 12 de octubre de 2026. Este documento describe el código actual y las decisiones tomadas; no sustituye su revisión antes de hacer cambios. Está pensado para otra persona o agente que continúe el proyecto.
+Última revisión: 15 de octubre de 2026. Este documento describe el código actual y las decisiones tomadas; no sustituye su revisión antes de hacer cambios. Está pensado para otra persona o agente que continúe el proyecto.
 
 ## Propósito y alcance actual
 
@@ -18,13 +18,13 @@ Implementado:
 - Monto mínimo de orden por vendedor y cantidad mínima opcional por producto.
 - Checkout dentro del carrito: por cada vendedor, dirección de entrega editable y condición de pago simulada (contado, transferencia o cuenta corriente). Al confirmar se genera una orden general (`pedido`) y una suborden independiente por vendedor, se descuenta stock y se vacía el carrito en una transacción.
 - Estados de suborden: pendiente, confirmada, preparada, enviada, entregada, rechazada y cancelada. Rechazar o cancelar devuelve el stock.
-- Sección Pedidos: «Mis compras» para toda cuenta y «Ventas recibidas» para vendedores, con las acciones de cambio de estado.
+- Mis Compras para toda cuenta, con Seguimiento e Historial de compras. Pedidos es independiente y solo para vendedores: Pedidos recibidos para ventas activas e Historial para entregadas, rechazadas o canceladas.
 
 No implementado: cobros reales, notificaciones, cancelación de la orden general completa en un solo paso, entregas parciales y reseñas.
 
 ## Decisiones de negocio que deben conservarse
 
-- Un vendedor también puede comprar a otros vendedores. Tiene Perfil, Mis productos, Explorar y carrito.
+- Un vendedor también puede comprar a otros vendedores. Tiene Perfil, Mis productos, Explorar, Mis Compras, Pedidos y carrito.
 - Una cuenta compradora no debe vender; no está prevista la conversión a vendedor.
 - No se permite comprar productos del propio negocio. Se ocultan en Explorar y se bloquean en el backend al guardar el carrito; no basta con ocultarlos en la UI.
 - El registro siempre crea un negocio nuevo y una cuenta asociada, en una transacción. No hay invitaciones ni flujo para sumar cuentas a negocios existentes.
@@ -193,7 +193,7 @@ La sesión JWT sí está en localStorage. No confundir eso con persistencia de c
 ## Detalles de interfaz y compatibilidad
 
 - Navbar: Perfil → Mis productos (solo vendedor) → Explorar; carrito accesible desde cualquier pestaña.
-- Navbar: se sumó Pedidos al final. En móviles angostos las pestañas se desplazan horizontalmente si no entran.
+- Navbar: Mis Compras está disponible para todas las cuentas y Pedidos solo para vendedores. Las pestañas se desplazan horizontalmente si no entran.
 - Al agregar productos se abre el carrito. Ya no se aplica el filtro de ese vendedor ni se pide vaciar el carrito al cambiar de vendedor.
 - El carrito agrupa los productos por vendedor, cada grupo con su subtotal, su barra de mínimo y, en el checkout, su entrega y su pago.
 - Mobile: logo solo «B», controles compactos, catálogo de dos columnas en el rango móvil configurado; en pantallas muy angostas vuelve a una columna.
@@ -276,6 +276,14 @@ La API incorpora `estado` a la orden general en el checkout, los reintentos y el
 Pedidos muestra Seguimiento para compras EN_CURSO e Historial para COMPLETADA, conservando los estados, importes y datos históricos de cada vendedor. Incluye un botón Actualizar pedidos y la fecha de última actualización de cada suborden. Los vendedores comienzan en Pedidos recibidos, con las acciones existentes para avanzar o rechazar, y siguen reponiendo stock desde Mis Productos → Agregar stock.
 
 Verificación: compilación de ambas aplicaciones, lint de backend, 35 pruebas de backend (incluida integración PostgreSQL en tablas temporales) y 24 de frontend. Las nuevas pruebas cubren las combinaciones de estados, el cierre de la última suborden, reintentos, stock e historial, y las vistas y acciones por rol mediante renderizado de React. No se realizó una verificación visual en navegador.
+
+## Separación entre compras y ventas, 15 de octubre de 2026
+
+Esta actualización reemplaza la navegación conjunta descrita en la sección del 14 de octubre. La pestaña Mis Compras está disponible para toda cuenta y contiene Seguimiento e Historial de las compras que hizo. Pedidos solo aparece y se renderiza para vendedores; contiene Pedidos recibidos (PENDIENTE, CONFIRMADA, PREPARADA y ENVIADA) e Historial de ventas (ENTREGADA, RECHAZADA y CANCELADA). El historial de ventas depende del estado de la suborden propia, independientemente de las demás subórdenes de la compra. No se cambia la regla del estado general.
+
+`Pedidos.tsx` recibe `tipo="compras" | "ventas"` y consulta únicamente `/pedidos/compras` o `/pedidos/ventas`, respectivamente. Cada sección se monta por separado para reiniciar su vista al navegar. El mensaje de confirmación del carrito dirige a Mis Compras. No requiere cambios de API ni migración de datos.
+
+Verificación: compilación del frontend y 28 pruebas aprobadas, incluidas las de navegación por rol, separación de consultas, clasificación de los siete estados y movimientos a historial tras entregar o rechazar. También se verificaron las dos secciones con la cuenta local del vendedor, la navegación del comprador y la interfaz móvil de 390 × 844, sin desbordamiento horizontal de la página en la vista del vendedor.
 
 ## Próximos pasos y precauciones
 

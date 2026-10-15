@@ -232,7 +232,7 @@ function Registro({ alRegistrarse }: { alRegistrarse: (sesion: Sesion) => void }
   );
 }
 
-type Seccion = 'explorar' | 'perfil' | 'productos' | 'pedidos';
+type Seccion = 'explorar' | 'perfil' | 'productos' | 'compras' | 'pedidos';
 
 function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guardarSesion: (sesion: Sesion) => void; cerrarSesion: () => void }) {
   const estadoCarrito = useCarrito(sesion.cliente.idCliente, sesion.accessToken, sesion.negocio.idNegocio);
@@ -336,12 +336,20 @@ function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guarda
           </button>
           <button
             type="button"
+            className={`nav-tab ${seccion === 'compras' ? 'active' : ''}`}
+            aria-current={seccion === 'compras' ? 'page' : undefined}
+            onClick={() => handleTabClick('compras')}
+          >
+            Mis Compras
+          </button>
+          {!esComprador && <button
+            type="button"
             className={`nav-tab ${seccion === 'pedidos' ? 'active' : ''}`}
             aria-current={seccion === 'pedidos' ? 'page' : undefined}
             onClick={() => handleTabClick('pedidos')}
           >
             Pedidos
-          </button>
+          </button>}
         </nav>
         <div className="navbar-actions">
           <span className={`role-badge ${claseRol}`}>{nombreRol}</span>
@@ -475,9 +483,14 @@ function Panel({ sesion, guardarSesion, cerrarSesion }: { sesion: Sesion; guarda
           </>
         </div>
       )}
-      {seccion === 'pedidos' && (
+      {seccion === 'compras' && (
+        <div key={`compras-${refreshKey}`}>
+          <Pedidos token={sesion.accessToken} tipo="compras" />
+        </div>
+      )}
+      {!esComprador && seccion === 'pedidos' && (
         <div key={`pedidos-${refreshKey}`}>
-          <Pedidos token={sesion.accessToken} esVendedor={!esComprador} />
+          <Pedidos token={sesion.accessToken} tipo="ventas" />
         </div>
       )}
       {carritoAbierto && <PanelCarrito estado={estadoCarrito} direccionInicial={sesion.negocio.direccion} alCerrar={() => setCarritoAbierto(false)} />}
